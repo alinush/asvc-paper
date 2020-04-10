@@ -1,0 +1,96 @@
+\section{Security Proofs}
+
+\subsection{KZG Batch Opening Binding (Re)definition}
+\label{s:kzg-batch-def}
+
+We rewrite the \textit{batch opening binding definition} of KZG~\cite[Sec. 3.4, pg. 9]{KZG10a} to be stronger and prove KZG still satisfies it.
+
+\begin{definition}[Batch Opening Binding]
+    \label{def:kzg:batch-opening-binding}
+    $\forall$ adversaries $\Adv$ running in time $\poly(\lambda)$:
+    \begin{align}
+    \Pr \left[ \begin{array}{c}
+    pp \leftarrow \mathsf{KZG.Setup}(1^\lambda, n), \\
+    c, I, J, v_I(X), v_J(X), \pi_I, \pi_J \leftarrow \Adv(1^\lambda) : \\
+    \mathsf{KZG.VerifyEvalBatch}(pp, c, I, \pi_I, v_I(X)) = T\ \wedge \\
+    \mathsf{KZG.VerifyEvalBatch}(pp, c, J, \pi_J, v_J(X)) = T\ \wedge \\
+    \exists k \in I\cap J,\ \text{such that}\ v_I(k) \ne v_J(k)
+    \end{array} \right] \le \mathsf{negl}(\lambda)
+    \end{align}
+\end{definition}
+
+Suppose an adversary breaks the definition.
+Let $A_I(X)= \prod_{i\in I} (X - i)$.
+Then, the following holds:
+\begin{align}
+e(c,g) &= e(\pi_I, g^{A_I(\tau)}) e(g^{v_I(\tau)},g)\\
+e(c,g) &= e(\pi_J, g^{A_J(\tau)}) e(g^{v_J(\tau)},g)
+\end{align}
+Divide the top equation by the bottom one to get:
+\begin{align}
+\mathbf{1}_T &= \frac{e(g^{v_I(\tau)},g)}{e(g^{v_J(\tau)},g)} \frac{e(\pi_I, g^{A_I(\tau)})}{e(\pi_J, g^{A_J(\tau)})}\Leftrightarrow\\
+\mathbf{1}_T &= e(g^{v_I(\tau)-v_J(\tau)},g) \frac{e(\pi_I, g^{A_I(\tau)})}{e(\pi_J, g^{A_J(\tau)})}\Leftrightarrow\\
+e(g^{v_J(\tau)-v_I(\tau)},g) &= \frac{e(\pi_I, g^{A_I(\tau)})}{e(\pi_J, g^{A_J(\tau)})}
+\end{align}
+Let $v_k = v_I(k)$ and $v_k' = v_J(k)$.
+We can rewrite $v_I(X)$ using the polynomial remainder theorem as $v_I(X)=q_I(X)(X-k) + v_k$.
+Similarly, $v_J(X)=q_J(X)(X-k) + v_k'$.
+\begin{align}
+e(g^{q_J(\tau)(\tau - k) + v_k'-q_I(\tau)(\tau -k)-v_k},g) &= \frac{e(\pi_I, g^{A_I(\tau)})}{e(\pi_J, g^{A_J(\tau)})}\Leftrightarrow\\
+e(g^{(\tau - k)(q_J(\tau) -q_I(\tau)) + v_k'-v_k},g) &= \frac{e(\pi_I, g^{A_I(\tau)})}{e(\pi_J, g^{A_J(\tau)})}\Leftrightarrow\\
+e(g^{(\tau - k)(q_J(\tau) -q_I(\tau))}, g) e(g^{v_k'-v_k},g) &= \frac{e(\pi_I, g^{A_I(\tau)})}{e(\pi_J, g^{A_J(\tau)})}\Leftrightarrow\\
+e(g^{q_J(\tau) -q_I(\tau)}, g)^{\tau - k} e(g,g)^{v_k'-v_k} &= \frac{e(\pi_I, g^{A_I(\tau)})}{e(\pi_J, g^{A_J(\tau)})}
+\end{align}
+Factor out $(X-k)$ in $A_I(X)$ to get $A_I(X)=a_I(X)(\tau - k)$.
+Similarly, $A_J(X)=a_J(X)(\tau - k)$.
+\begin{align}
+e(g^{q_J(\tau) -q_I(\tau)}, g)^{\tau - k} e(g,g)^{v_k'-v_k} &= \left(\frac{e(\pi_I, g^{a_I(\tau)})}{e(\pi_J, g^{a_J(\tau)})}\right)^{\tau -k}\Leftrightarrow\\
+e(g^{q_J(\tau) -q_I(\tau)}, g) e(g,g)^\frac{v_k'-v_k}{\tau - k} &= \frac{e(\pi_I, g^{a_I(\tau)})}{e(\pi_J, g^{a_J(\tau)})}\Leftrightarrow\\
+e(g,g)^\frac{v_k'-v_k}{\tau - k} &= \frac{e(\pi_I, g^{a_I(\tau)})}{e(\pi_J, g^{a_J(\tau)}) e(g^{q_J(\tau) - q_I(\tau)}, g)}\Leftrightarrow\\
+e(g,g)^\frac{1}{\tau - k} &= \left(\frac{e(\pi_I, g^{a_I(\tau)})}{e(\pi_J, g^{a_J(\tau)}) e(g^{q_J(\tau) - q_I(\tau)}, g)}\right)^{\frac{1}{v_k'-v_k}}
+\end{align}
+
+Since the commitments to $a_I(X),a_J(X),q_I(X),q_J(X)$ can be easily reconstructed from $v_I(X),v_J(X), I$ and $J$, this constitutes a direct break of $n$-SBDH.
+
+\subsection{Update Key Uniqueness}
+\label{s:update-key-uniqueness-proof}
+
+We prove that our aSVC scheme from \cref{s:svc} has \textit{Update Key Uniqueness} as defined in \cref{def:vc:update-key-uniquness}.
+Let $a$ be the commitment to $A(X)=X^n - 1$ from the verification key \vrk.
+Suppose an adversary outputs two update keys $\upk_i = (a_i, u_i)$ and $\upk_i'=(a_i',u_i')$ at position $i$ that both pass \vcverifyupk but $\upk_i\ne \upk_i'$.
+Then, it must be the case that either $a_i \ne a_i'$ or that $u_i \ne u_i'$.
+
+\parhead{$a_i\ne a_i'$ Case:}
+Since both proofs pass verification, the following pairing equations hold:
+\begin{align}
+e(a_i, g^\tau / g^{\omega^i}) &= e(a, g)\\
+e(a_i', g^\tau / g^{\omega^i}) &= e(a, g)
+\end{align}
+
+Thus, it follows that:
+\begin{align}
+e(a_i, g^\tau / g^{\omega^i}) &= e(a_i', g^\tau / g^{\omega^i})\Leftrightarrow\\
+e(a_i, g) &= e(a_i', g)\Leftrightarrow\\
+a_i = a_i'
+\end{align}
+
+Contradiction.
+
+\parhead{$u_i\ne u_i'$ Case:}
+Let $A'(X)$ denote the derivative of $A(X)=X^n - 1$.
+Let $\ell_i=a_i^{1/A'(\omega^i)}=g^{\lagr_i(\tau)}$.
+
+Since both proofs pass verification, the following pairing equations hold:
+\begin{align}
+e(\ell_i/g^1, g) &= e(u_i,g^\tau/g^{\omega^i})\\
+e(\ell_i/g^1, g) &= e(u_i',g^\tau/g^{\omega^i})\\
+\end{align}
+
+Thus, it follows that:
+\begin{align}
+e(u_i,g^\tau/g^{\omega^i}) &= e(u_i',g^\tau/g^{\omega^i})\\
+e(u_i, g) &= e(u_i', g)\Leftrightarrow\\
+u_i = u_i'
+\end{align}
+
+Contradiction.

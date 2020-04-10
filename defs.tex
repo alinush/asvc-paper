@@ -1,0 +1,94 @@
+%
+% Styling
+%
+\newcommand{\parhead}[1]{\medskip\noindent{\bfseries\boldmath\ignorespaces{#1}}}
+\newcommand{\api}{\hangindent=\parindent \hangafter=1 \noindent}
+
+%
+% Some nice colors:
+%  Blue: #268bd2
+%  (Grey) Blue: #657b83
+%  Green: #859900
+%  (Dark) Orange: #cb4b16
+%  Red: #dc322f
+%  Periwinkle: #6c71c4
+%  Pink: #d33682
+%  Teal: #2aa198
+%  Yellow: #b58900
+%
+\definecolor{myBlueColor}{HTML}{268BD2}
+\definecolor{myYellowColor}{HTML}{B58900}
+\definecolor{myGreenColor}{HTML}{859900}
+\definecolor{myRedColor}{HTML}{DC322F}
+\definecolor{myOrangeColor}{HTML}{CB4B16}
+\newcommand{\myblue}[1]{\textcolor{myBlueColor}{#1}}
+\newcommand{\myred}[1]{\textcolor{myRedColor}{#1}}
+\newcommand{\myyellow}[1]{\textcolor{myYellowColor}{#1}}
+\newcommand{\mygreen}[1]{\textcolor{myGreenColor}{#1}}
+\newcommand{\myorange}[1]{\textcolor{myOrangeColor}{#1}}
+
+%
+% Notes and TODOs
+%
+\newcommand{\todo}[1]{\noindent\textcolor{red}{\textbf{(}\textsc{\textbf{{TODO: }}}}#1\textcolor{red}{\textbf{)}}}
+\newcommand{\anote}[1]{\textcolor{blue}{[\textbf{Alin}: #1]}}
+\newcommand{\inote}[1]{\textcolor{green}{[\textbf{Ittai}: #1]}}
+
+%
+% Some mathy things
+%
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\newcommand{\dom}{\mathsf{Domain}}
+\newcommand{\bezout}{B\'ezout\xspace}
+\newcommand{\G}{\mathbb{G}}
+\newcommand{\Gho}{\mathbb{G}_{?}}
+\newcommand{\Fp}{\mathbb{F}_p}
+\newcommand{\GT}{\mathbb{G}_T}
+\newcommand{\Zp}{\mathbb{Z}_p}
+\newcommand{\poly}{\mathsf{poly}}
+\newcommand{\negl}{\mathsf{negl}}
+\newcommand{\lagr}{\ensuremath{\mathcal{L}}}
+\newcommand{\Adv}{\ensuremath{\mathcal{A}}\xspace} % adversary
+
+%
+% Vector Commitment things
+%
+\newcommand{\vect}[1]{\ensuremath{\bm{\mathrm{#1}}}}
+
+\newcommand{\vcsetup}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{KeyGen}}\xspace}
+\newcommand{\vccommit}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{Commit}}\xspace}
+\newcommand{\vccommitempty}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{EmptyCommit}}\xspace}
+\newcommand{\vcopenpos}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{ProvePos}}\xspace}
+\newcommand{\vcverifypos}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{VerifyPos}}\xspace}
+\newcommand{\vcverifyaggpos}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{VerifyAggPos}}\xspace}
+\newcommand{\vcverifyupk}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{VerifyUPK}}\xspace}
+\newcommand{\vccommupdate}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{UpdateComm}}\xspace}
+\newcommand{\vcproofupdate}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{UpdateProof}}\xspace}
+
+\newcommand{\vcopenall}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{ProveAll}}\xspace}
+\newcommand{\vcaggregateproofs}{\ensuremath{\mathsf{VC}}.\ensuremath{\mathsf{AggregateProofs}}\xspace}
+
+\newcommand{\emptydigest}{d_\varnothing}
+\newcommand{\pp}{\ensuremath{\mathsf{PP}}\xspace}
+\newcommand{\prk}{\ensuremath{\mathsf{prk}}\xspace}
+\newcommand{\vrk}{\ensuremath{\mathsf{vrk}}\xspace}
+\newcommand{\upk}{\ensuremath{\mathsf{upk}}\xspace}
+
+\newcommand{\treepath}{\ensuremath{\mathsf{treepath}}}
+
+%
+% \Sys things
+%
+\newcommand{\addr}{\ensuremath{\mathsf{addr}}\xspace}
+\newcommand{\bal}{\ensuremath{\mathsf{bal}}\xspace}
+\newcommand{\cnt}{\ensuremath{\mathsf{cnt}}\xspace}
+\newcommand{\inittxn}{\texttt{\textbf{INIT}}\xspace}
+\newcommand{\initspendtxn}{\texttt{INITSPEND}\xspace}
+\newcommand{\minttxn}{\texttt{\textbf{MINT}}\xspace}
+\newcommand{\pk}{\ensuremath{\mathbf{\mathsf{pk}}}\xspace}
+\newcommand{\PK}{\ensuremath{\mathbf{\mathsf{FPK}}}\xspace}
+\newcommand{\spendtxn}{\texttt{\textbf{SPEND}}\xspace}
+\newcommand{\tpk}{\ensuremath{\mathsf{tpk}}\xspace}
+\newcommand{\tsk}{\ensuremath{\mathsf{tsk}}\xspace}
+\newcommand{\tx}{\ensuremath{\mathsf{tx}}\xspace}

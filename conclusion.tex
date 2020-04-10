@@ -1,0 +1,10 @@
+\section{Conclusion}
+In this paper, we formalized a new cryptographic primitive called an \textit{aggregatable subvector commitment (aSVC)}, which is a \textit{subvector commitment (SVC)} scheme that supports aggregation and supports updating proofs and commitments.
+Then, we gave an efficient aSVC construction based on KZG commitments to Lagrange polynomials, which outperforms previous work.
+Lastly, we used our aSVC to build an efficient stateless cryptocurrency in the account model which outperforms previous work.
+
+\parhead{Future Work.}
+Our work leaves open interesting challenges in stateless cryptocurrencies.
+First, the ability to aggregate update keys would further reduce block size.
+Second, unbounded proof aggregation~\cite{CFG+20} could be used to further ``compress'' stateless blockchains.
+Third, authenticated dictionaries \textit{with scalable updates} would remove the limitation on the number of users and eliminate DoS attacks on user registration.

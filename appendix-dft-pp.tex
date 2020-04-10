@@ -1,0 +1,36 @@
+\section{Computing all $u_i=g^\frac{\lagr_i(\tau) - 1}{\tau - \omega^i}$ in $O(n\log{n})$ time from $g^{\tau^i}$'s}
+\label{s:computing-all-uis}
+
+In \cref{s:asvc:from-kzg:public-params}, we argued all $u_i$'s can be computed in $O(n\log{n})$ time.
+Here, we give intuition on the quotients $q_i(X)$ (see \cref{eq:ui-qi}) and prove they are correct.
+
+First, let us look at the quotient $q_1(X)$ obtained when dividing $\psi_1(X)$ by $X-\omega^1$, assuming $n=8$:
+\\
+
+\polylongdiv{\omega^0 X^7 + \omega^1 X^6 + \omega^2 X^5 + \omega^3 X^4 + \omega^4 X^3 + \omega^5 X^2 + \omega^6 X + \omega^7}{X-\omega}
+
+We have to show that:
+\begin{align}
+    q_i(X) &= \sum_{j\in [0,n-2]} (j+1)(\omega^i)^j X^{(n - 2) - j},\forall i \in [0,n)
+\end{align}
+We do this by showing that the polynomial remainder theorem holds;
+i.e., $\psi_i(X) = q_i(X)(X-\omega^i) + \psi_i(\omega_i)$:
+{
+\allowdisplaybreaks % Not sure if this only allows breaks in this block or in the rest of the document.
+\begin{align}
+q_i(X)(X-\omega^i) + \psi_i(\omega_i)
+    &= q_i(X)(X-\omega^i) + n\omega^{-i}\\
+    &= n\omega^{-i} + (X-\omega^i)\sum_{j\in [0,n-2]} (j+1)(\omega^i)^j X^{(n - 2) - j}\\
+    &= n\omega^{-i} + X\cdot\sum_{j\in [0,n-2]} (j+1)(\omega^i)^j X^{(n - 2) - j} - \omega^i\cdot \sum_{j\in [0,n-2]} (j+1)(\omega^i)^j X^{(n - 2) - j}\\
+    &= n\omega^{-i} + \sum_{j\in [0,n-2]} (j+1)(\omega^i)^j X^{(n - 1) - j} - \sum_{j\in [0,n-2]} (j+1)(\omega^i)^{j+1} X^{(n - 2) - j}\\
+    &= n\omega^{-i} + \sum_{j\in [0,n-2]} (j+1)\omega^{ij} X^{(n - 1) - j} - \sum_{j\in [1,n-1]} j \omega^{ij} X^{(n - 2) - (j-1)}\\
+    &= n\omega^{-i} + \sum_{j\in [0,n-2]} (j+1)\omega^{ij} X^{(n - 1) - j} - \sum_{j\in [1,n-1]} j \omega^{ij} X^{(n - 1) - j}\\
+    &= n\omega^{-i} + X^{n - 1} + \sum_{j\in [1,n-2]} (j+1)\omega^{ij} X^{(n - 1) - j} - \sum_{j\in [1,n-2]} j \omega^{ij} X^{(n - 1) - j} + (n-1) \omega^{i(n-1)} X^0\\
+    &= X^{n - 1} + \sum_{j\in [1,n-2]} \omega^{ij} X^{(n - 1) - j} + (n-1) \omega^{-i} X^0 +  n\omega^{-i} X^0\\
+    &= \sum_{j\in [0,n-2]} \omega^{ij} X^{(n - 1) - j} + \omega^{-i} X^0\\
+    &= \sum_{j\in [0,n-2]} \omega^{ij} X^{(n - 1) - j} + \omega^{in-i} X^0\\
+    &= \sum_{j\in [0,n-2]} \omega^{ij} X^{(n - 1) - j} + \omega^{i(n-1)} X^0\\
+    &= \sum_{j\in [0,n)} \omega^{ij} X^{(n - 1) - j}\\
+    &= \psi_i(X)
+\end{align}
+}

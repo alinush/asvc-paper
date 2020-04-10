@@ -1,0 +1,23 @@
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor} % \textcolor for coloring text
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm} % for bolding math text
+\usepackage{booktabs}       % for table spacing, \midrule, \toprule
+\usepackage{cite}
+\usepackage{fancyhdr}
+\usepackage[linguistics]{forest}
+\usepackage[margin=.7in,bmargin=.7in]{geometry}
+\usepackage{hyperref}
+\usepackage[misc]{ifsym}  % use \Letter for corresponding author
+\usepackage{makecell}       % use \makecell{text\\ new line} to break up lines inside table cells
+\usepackage{mathtools}
+\usepackage{polynom}        % useful for dividing polynomials
+\usepackage{xspace}
+\usepackage{verbatim}       % for \begin{comment}
+
+\usepackage[noabbrev,capitalize]{cleveref}
+
+% for some reason, these are not defined in cleveref and I was getting '??' in my crefs to subsubsections in the appendix
+\crefformat{subsubsubappendix}{Appendix #2#1#3}
+\crefmultiformat{subsubsubappendix}{Appendices #2#1#3}{ and~#2#1#3}{, #2#1#3}{, and~#2#1#3}

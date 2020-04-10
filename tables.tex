@@ -1,0 +1,190 @@
+\newcommand{\bbfc}{\ensuremath{N \lg{N}}}
+\newcommand{\bbvy}{\ensuremath{\myred{\ell\lg{N}+\lambda}}}
+\newcommand{\bbvys}{\ensuremath{b\ell\lg{N}+\lambda}}
+\newcommand{\btc}{\ensuremath{\mlgsm+\nlgn}} % batch proof computation time for KZG-based solution
+\newcommand{\cdh}{\mathsf{cdh}}
+\newcommand{\cfgc}{\ensuremath{\ell\nlgn}}
+\newcommand{\cfoo}{\ensuremath{N\lg{N}}}             % CFG_1 open 1
+\newcommand{\cfos}{\ensuremath{\ell(n-b)\lg{N}}}     % CFG_1 open subvector
+\newcommand{\cftc}{\ensuremath{N \lg{n}}}            % CFG_2 commit
+\newcommand{\cfto}{\ensuremath{N \lg{n}}}            % CFG_2 open
+\newcommand{\cfts}{\ensuremath{\ell(n-b)\lg{(n-b)}}} % CFG_2 open subvector
+\newcommand{\cftvs}{\ensuremath{\ell b\lg{b}}}
+\newcommand{\cfgOne}{CFG$_\ell^1$}
+\newcommand{\cfgTwo}{CFG$_\ell^2$}
+\newcommand{\kzglag}{KZG$_\mathsf{Lagr}$}
+\newcommand{\lgn}{\ensuremath{\lg{n}}}
+\newcommand{\lgr}{\ensuremath{\myred{\lg{n}}}}
+\newcommand{\lgsm}{\ensuremath{\lg^2{b}}}
+\newcommand{\llgn}{\ensuremath{\ell \lg{N}}}
+\newcommand{\lln}{\ensuremath{\log{(\ell n)}}}
+\newcommand{\mlgsm}{\ensuremath{b\lg^2{b}}}
+\newcommand{\nlgn}{\ensuremath{n\lg{n}}}
+\newcommand{\nlgsn}{\ensuremath{n\lg^2{n}}}
+\newcommand{\nop}{\myred{$\times$}}
+\newcommand{\ns}{\ensuremath{\myred{n^2}}}
+\newcommand{\rl}{\ensuremath{\myred{{\log{n}}}}}
+\newcommand{\rlgn}{\ensuremath{\myred{\llgn}}}
+\newcommand{\rlbgn}{\ensuremath{\myred{\lambda \lg{N}}}}
+\newcommand{\rlgsm}{\ensuremath{\myred{\lg^2{b}}}} % note \bm{\log^2{b}} errors for some reason\\
+\newcommand{\rlsm}{\ensuremath{\myred{\log^2{b}}}} % note \bm{\log^2{b}} errors for some reason
+\newcommand{\rn}{\ensuremath{\myred{{n}}}}
+\newcommand{\rsa}{\mathsf{rsa}}
+\newcommand{\secp}{\ensuremath{\myred{\lambda}}}
+\newcommand{\secpn}{\ensuremath{\myred{\lambda}n}}
+\newcommand{\secpm}{\ensuremath{\myred{\lambda}b}}
+\newcommand{\tcz}{\ensuremath{\lgn + b}}   % \vrk size for TCZ+20
+
+\newcommand{\ourasvc}{\textbf{Our aSVC}                             & $n$   & $b$  & $1$  & $n$        & $1$   & $1$   & $n$    & $1$   & $1$   & \btc              & \mlgsm & $b\lg^2{b}$ & \nlgn}
+\newcommand{\ourasvcprecomp}{\textbf{Our aSVC}$_{\mathsf{precomp}}$  & $n$   & $b$  & $1$  & $n\log{n}$ & $1$   & $1$   & $1$    & $1$   & $1$   & \mlgsm      & \mlgsm & \mlgsm & \nlgn}
+\newcommand{\tableVcComparison}[1]{%
+    \begin{table*}[t]
+        \centering
+        \caption{
+            Asymptotic comparison of our aSVC with other (aS)VCs.
+            $n$ is the vector size and $b$ is the subvector size.
+            See \cref{s:complexity:kog} for a detailed explanation.
+            The complexities in the table are \textit{asymptotic} in terms of number of pairings, exponentiations and field operations.
+            \textit{``Proof upd.''} is the time to update \textit{one} proof for \textit{one} single vector element after a change to \textit{one} vector element.
+            \textit{``Com. upd.''} is the time to update the commitment after a change to one vector element.
+            We include complexities for computing a VC proof for $v_i$ and a size-$b$ subvector proof (in \textit{``Prove one $v_i$''} and in \textit{``Prove subv. $(v_i)_{i\in I}$''}, respectively) and for committing to a size-$n$ vector (in \textit{``Com.''}), even though these features are not needed in a stateless cryptocurrency.
+        }
+        \label{t:#1} % must go after \caption{} for \cref{} to work
+        \setlength{\tabcolsep}{.3em} % space between columns
+        \begin{tabular}{lccccccccccccc}
+            %\toprule
+            {\makecell{(aS)VC scheme}}
+            & \makecell{$\vert \prk\vert$}
+            & \makecell{$\vert\vrk\vert$}
+            & \makecell{$\vert \upk_i\vert$}
+            & \makecell{Com.}
+            & \makecell{Com.\\upd.}
+            & \makecell{$\vert\pi_i\vert$} % updating proof typically takes O(|proof-size|) time, but some schemes don't support its
+            & \makecell{Prove\\one\\$v_i$}
+            & \makecell{Verify\\one\\$v_i$}
+            & \makecell{Proof\\upd.}
+            & \makecell{Prove\\subv.\\$(v_i)_{i\in I}$}
+            & \makecell{Verify\\subv.\\$(v_i)_{i\in I}$}
+            & \makecell{Aggr-\\egate}
+            & \makecell{Prove\\each\\$(v_i)_{i\in[n]}$}
+            \\
+            \toprule
+            LM$_\cdh$~\cite{CF13,LM19}   & \ns   & \rn  & \rn  & $n$    & $1$   & $1$   & $n$    & $1$   & $1$   & $\myred{bn}$      & $b$    & \nop        & \ns\\
+            KZG~\cite{KZG10a}            & $n$   & $b$  & \nop & \nlgsn & \nop  & $1$   & $n$    & $1$   & \nop  & \btc              & \mlgsm & \nop        & \ns\\
+            \kzglag~\cite{CDHK15}        & $n$   & \rn  & $1$  & \nlgsn & $1$   & $1$   & $n$    & $1$   & \nop  & $n\lg^2{n}$       & \mlgsm & \nop        & \ns\\
+            CPZ~\cite{CPZ18}             & $n$   & \lgn & \lgr & $n$    & $1$   & \lgr  & $n$    & \lgr  & \lgr  & \nop              & \nop   & \nop        & \nlgn\\
+            % Note: "Prove One" must output \log-sized proofs, since we are talking about TCZ+20 with updatable proofs!
+            TCZ~\cite{Tomescu20}         & $n$   & \tcz & \lgr & \nlgn  & $1$   & \lgr  & \nlgn  & \lgr  & \lgr  & \btc              & \mlgsm & \nop        & \nlgn\\
+            LY~\cite{GRWZ20,LY10}        & $n$   & \rn  & \rn  & $n$    & $1$   & 1     & $n$    & $1$   & $1$    & $\myred{bn}$      & $b$    & $b$         & \ns\\
+            \toprule
+            \ourasvc\\
+            \ourasvcprecomp
+        \end{tabular}
+        %\toprule
+    \end{table*}
+}
+
+\newcommand{\ourasvcrsa}{\textbf{Our aSVC} & $n$   & $b$  & $1$  & $n$ & $1$   & $1$   & $n$    & $1$   & $1$   & $b\lg^2{b} + n\lg{n}$ & \mlgsm & $b\lg^2{b}$ & \nlgn}
+\newcommand{\tableVcRsaComparison}[1]{%
+    \begin{table*}[t]
+        \scriptsize
+        \centering
+        \caption{
+            Asymptotic comparison of our aSVC with (aS)VCs based on hidden-order groups.
+            $n$ is the vector size, $b$ is the subvector size, $\ell$ is the length in bits of vector elements, $N=n\ell$ and $\lambda$ is the security parameter.
+            For schemes based on hidden-order groups, the complexities in the table are \textit{asymptotic} in terms group operations rather than exponentiations.
+            This gives a better sense of performance, since exponents cannot be ``reduced'' in hidden-order groups as they can in known-order groups.
+            We try to account for field operations (of size ${2\lambda}$ bits), but quantifying them precisely in these schemes can be very cumbersome.
+            Also, since they are much faster, for the most part they can be safely ignored.
+            For our aSVC scheme, we give the same complexities in terms of group \textit{exponentiations}, pairings and field operations (see \cref{s:complexity-lagrange-asvc} for details).
+            Because of this, the reader must be careful when comparing our scheme with the other schemes in this table: a group exponentiation in our scheme is roughly equivalent to $O(\lambda)$ group operations in the hidden-order group schemes.
+        }
+        \label{t:#1} % must go after \caption{} for \cref{} to work
+        \setlength{\tabcolsep}{.3em} % space between columns
+        \begin{tabular}{lccccccccccccc}
+            %\toprule
+            {\makecell{(aS)VC scheme}}
+            & \makecell{$\vert \prk\vert$}
+            & \makecell{$\vert\vrk\vert$}
+            & \makecell{$\vert \upk_i\vert$}
+            & \makecell{Com.}
+            & \makecell{Com.\\upd.}
+            & \makecell{$\vert\pi_i\vert$} % updating proof typically takes O(|proof-size|) time, but some schemes don't support its
+            & \makecell{Prove\\one\\$v_i$}
+            & \makecell{Verify\\one\\$v_i$}
+            & \makecell{Proof\\upd.}
+            & \makecell{Prove\\subv.\\$(v_i)_{i\in I}$}
+            & \makecell{Verify\\subv.\\$(v_i)_{i\in I}$}
+            & \makecell{Aggr-\\egate}
+            & \makecell{Prove\\each\\$(v_i)_{i\in[n]}$}
+            \\
+            \toprule
+
+            BBF$_\ell$~\cite{BBF19}      & $1$   & $1$  & $1$  & \bbfc & \rlgn & \rlgn & \bbfc & \bbvy & \nop  & \bbfc             & \bbvys & $b\llgn$    & $N\lg^2{N}$\\
+            \cfgOne~\cite{CFG+20}        & $1$   & $1$  & \nop & \bbfc & \nop          & $1$   & \cfoo  & \bbvy & \nop  & \cfos             & \bbvys & $b\lg{b}\lg{N}$ & $N\lg^2{N}$\\
+            \cfgTwo~\cite{LM19,CFG+20}   & $1$   & $1$  & \nop & \cftc & \nop          & $1$   & \cfto  & $\ell$& \nop  & \cfts             & \cftvs & $\ell b\lg^2{b}$ & $N\lg^2{n}$\\
+            \toprule
+            % aggregation requires interpolating A_I(X) = \prod_{i\in I)(X-\omega^{i-1}) and computing all A_I'(\omega^{i-1}) for all i \in I in O(|I|\log^2{|I|}) time.
+            % note that I \subseteq [n], so we can't speed up computing the A_I(\omega^{i-1})'s
+            \ourasvcrsa
+        \end{tabular}
+    \end{table*}
+}
+\newcommand{\Gop}{\ensuremath{\ |\G|}}
+\newcommand{\Ghop}{\ensuremath{\ |\Gho|}}
+\newcommand{\Gexp}{\ensuremath{\ |\G^e|}}
+\newcommand{\Fop}{\ensuremath{\ |\mathbb{F}|}}
+\newcommand{\Pair}{\ensuremath{\ |\mathbb{P}|}}
+\newcommand{\Bits}{\ensuremath{\ |\mathsf{bit}|}}
+
+\newcommand{\tableStatelessComparison}{%
+\begin{table*}[t]
+	\scriptsize
+	\centering
+	\caption{
+        Asymptotic comparison of our work with other stateless cryptocurrencies.
+        $n$ is the number of cryptocurrency users, $2\lambda$ is the bit-width of a vector element in BBF$_{2\lambda}$~\cite{BBF18}, where $\lambda$ is the security parameter.
+        $N=\lambda n$, and $b$ is the number of transactions in a block.
+        $|\G|$ denotes either a group operation or a group element in a known-order, pairing-friendly group.
+        $|\Gho|$ denotes the same for hidden-order groups.
+        $|\G^e|$ denotes an exponentiation in a known-order group.
+        $|\mathbb{F}|$ denotes either a field element or operation in a field of size $2^{2\lambda}$.
+        $|\mathbb{P}|$ denotes a pairing computation.
+        $|\pi_i|$ is the size of a proof for a user's account balance.
+        $|\upk_i|$ is the size of user $i$'s update key.
+        $|\pi_\mathsf{agg}|$ is the size of a proof aggregated from all $\pi_i$'s in a block.
+        \textit{``Miner storage''} is the overhead for miners storing update keys.
+        \textit{``Vrfy. proofs time/blk.''} is the time for a miner to (batch) verify all transaction proofs in a new block.
+        \textit{``Check digest time/blk.''} is the time for a miner to check that, by ``applying'' the transactions from block $t+1$ to block $t$'s digest, he obtains the correct digest for block $t+1$.
+        \textit{``Aggr. proofs time/blk.''} is the time to aggregate $b$ transaction proofs into a single $\pi_\mathsf{agg}$ for a block.
+        \textit{``User proof synchr. time/blk''} is the time for a user to ``synchronize'' or update her proof by ``applying'' all the transactions in a new block.
+        We treat Pointproofs~\cite{GRWZ20} as a payments-only stateless cryptocurrency without smart contracts, where users store the $O(n)$-sized update key.
+        Although BBF$_{2\lambda}$~\cite{BBF18} has asymptotic performance close to ours, it suffers from concretely higher overheads due to its reliance on hidden-order groups.
+        Also, it does not yet support updating proofs (see~\cref{s:complexity-bbf:proof-updates}).
+        Our aggregation and verification times $\pi_\mathsf{agg}$ have an undesired $\log^2{b}$ factor, which comes from doing $O(b\log^2{b})$ very fast field operations.
+        However, in practice, the $O(b)$ exponentiations dominate the run time.
+        A detailed analysis of the underlying VCs can be found in \cref{s:complexity:pointproofs,s:complexity-lagrange-asvc,s:complexity:cpz,s:complexity-bbf}.
+	}
+	\label{t:stateless-comparison} % must go after \caption{} for \cref{} to work
+    \setlength{\tabcolsep}{.4em} % space between columns
+	\begin{tabular}{lcccccccc}
+		{\makecell{Account-based\\stateless\\cryptocurrencies}}
+        & \makecell{$|\pi_i|$}
+        & \makecell{$|\upk_i|$}
+        & \makecell{$|\pi_\mathsf{agg}|$}
+        & \makecell{Miner\\storage}
+   		& \makecell{Vrfy.\\proofs\\time/blk.}
+        & \makecell{Check\\digest\\time/blk.}
+		& \makecell{Aggr.\\proofs\\time/blk.}
+		& \makecell{User proof\\synchr.\\time/blk.}
+        \\
+		\toprule
+
+		Edrax~\cite{CPZ18}            & \rl\Gop              & \rl\Gop  & \nop     & \rn & $b\rl\Pair$                 & $b\Gexp$       & \nop              & $b\rl\Gexp$ \\
+		Pointproofs~\cite{GRWZ20}     & $1\Gop$              & \rn\Gop  & $1\Gop$  & \rn & $b\Gexp + 2\Pair$           & $b\Gexp$       & $b\Gexp$          & $b\Gexp$ \\
+		BBF$_{2\lambda}$~\cite{BBF18} & $\rlbgn\Bits+1\Ghop$ & $1\Ghop$ & $1\Ghop$ & $1$ & $b\rlbgn\Fop +\lambda\Ghop$ & $b\rlbgn\Ghop$ & $\Omega(b\rlbgn)$ & \nop \\
+		\toprule
+		\textbf{This work}            & $1\Gop$              & $1\Gop$  & $1\Gop$  & $1$ & $b\rlsm\Fop + b\Gexp + 2\Pair$ & $b\Gexp$ & $b\rlsm\Fop + b\Gexp$ & $b\Gexp$ \\
+	\end{tabular}
+\end{table*}
+}

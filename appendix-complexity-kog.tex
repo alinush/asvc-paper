@@ -1,0 +1,363 @@
+\section{Complexities of VCs in \cref{t:asvc-comparison}}
+\label{s:complexity:kog}
+
+\tableVcComparison{asvc-comparison-appendix}
+
+We explain the complexities we gave in \cref{t:asvc-comparison}, which we re-include above for convenience as \cref{t:asvc-comparison-appendix}.
+Each VC scheme has its own sub-section where we explain its complexities, ultimately surveying the full scheme itself.
+Despite our best efforts to understand the complexities of each scheme, we recognize there could be better upper bounds for some of them.
+
+\subsection{Complexities of LM$_\mathsf{cdh}$~\cite{LM19}}
+
+This scheme was originally proposed by Catalano and Fiore~\cite{CF13} and extended by Lai and Malavolta to support subvector proofs~\cite{LM19}.
+
+\parhead{Public Parameters.}
+% |\prk| = 1+n+n/2 to be more exact
+The proving key is $\prk=(h_{i,j}=g^{z_i \cdot z_j})_{i,j\in [0,n),i\ne j}$ and is $O(n^2)$ sized.
+The verification key is $\vrk=(h_{i}=g^{z_i})_{i\in [0,n)}$ and is $O(n)$-sized.
+% |\vrk|: each player needs h_i to verify position i
+% (unclear if you can include h_i with proof: what could I verify $h_i = h^{z_i}$ against?)
+The $i$th update key is $\upk_i = (h_i, (h_{i,j})_{j\in [0,n)})$.
+% |\upk_i|: player $i$ needs to send $h_{i,j}$ for all $j$ so any player $j$ can update her proof
+Note that $h_{i,j} = h_j^{z_i} = h_i^{z_j}$.
+
+\parhead{Commitment.}
+A commitment is $c=\prod_{i\in [0,n)} h_i^{v_i}$ and can be computed with $O(n)$ exponentiations.
+If any vector element $v_j$ changes to $v_j + \delta$, the commitment can be updated in $O(1)$ time using $h_j$ from $\upk_j$ as $c' = c \cdot (h_j)^{\delta}$.
+
+\parhead{Proofs for a $v_i$.}
+A proof for $v_i$ is:
+\begin{align}
+\pi_i = \prod_{j\in [0,n),j \ne i} h_{i,j}^{v_j}=\left(\prod_{j\in [0,n),j \ne i} h_{j}^{v_j}\right)^{z_i}
+\end{align}
+The proof is $O(1)$-sized and can be computed from the $h_{i,j}$'s in the \prk with $O(n)$ exponentiations.
+It can be verified in $O(1)$ time using $h_i$ from the \vrk by computing two pairings:
+\begin{align}
+e(C/h_i^{v_i}, h_i) = e(\pi_i, g)
+\end{align}
+If any vector element $v_j,j\ne i$ changes to $v_j + \delta$, the proof $\pi_i$ can be updated in $O(1)$ time using $h_{i,j}$ from $\upk_j$ as $\pi_i' = \pi_i \cdot \left(h_{i,j}^{\delta}\right)$.
+This new $\pi_i'$ will verify against the updated $c'$ commitment defined earlier.
+If $v_i$ changes to $v_i + \delta$, the proof $\pi_i$ need not be updated.
+
+\parhead{Subvector Proofs for $(v_i)_{i\in I}$}
+A $O(1)$-sized subvector proof for $\vect{v}_I$ is:
+\begin{align}
+\pi_I = \prod_{i \in I}\prod_{j \in [0,n)\setminus I} h_{i,j}^{v_j}=\prod_{i \in I}\left(\prod_{j \in [0,n)\setminus I} h_{j}^{v_j}\right)^{z_i}=\prod_{i\in I} \pi_i^*
+\end{align}
+As intuition, note that the inner product $\pi_i^*$ is very similar to a proof $\pi_i$ for $v_i$ but for a vector $(v_j)_{j\in [0,n) - I}$.
+% Then, the outer product just aggregates all these $\pi_i^*$'s.
+The proof can be computed from the $h_{i,j}$'s in the \prk with $O((n-|I|)|I|)$ exponentiations (because each $\pi_i^*$ can be computed in $O(n-|I|)$ exponentiations).
+% NOTE: it might seem like things repeat, but they bases $h_{i,j}$ are different for each $i$
+A subvector proof $\pi_I$ can be verified using $(h_i)_{i\in I}$ from \vrk by checking in $O(|I|)$ time if:
+\begin{align}
+e\left(c/\prod_{j\in I} h_j^{v_j}, \prod_{i\in I} h_i\right) &= e(\pi_I, g)\Leftrightarrow\\
+e\left(\prod_{j\in [0,n)\setminus I} h_j^{v_j}, \prod_{i\in I} g^{z_i}\right) &= e\left(\prod_{i \in I}\prod_{j \in [0,n)\setminus I} h_{i,j}^{v_j}, g\right)\\
+e\left(\prod_{j\in [0,n)\setminus I} h_j^{v_j}, g^{\sum_{i\in I} z_i}\right) &= e\left(\prod_{i \in I}\left(\prod_{j \in [0,n)\setminus I} h_{j}^{v_j}\right)^{z_i}, g\right)\\
+e\left(\left(\prod_{j\in [0,n)\setminus I} h_j^{v_j}\right)^{\sum_{i\in I} z_i}\right) &= e\left(\left(\prod_{j \in [0,n)\setminus I} h_{j}^{v_j}\right)^{\sum_{i \in I}z_i}, g\right)
+\end{align}
+
+\parhead{Aggregating Proofs and Precomputing All Proofs.}
+Aggregating proofs is not discussed in~\cite{CF13,LM19}, but it seems possible.
+Finally, precomputing all proofs efficiently is not discussed.
+Naively, it can be done inefficiently in $O(n^2)$ time.
+
+\subsection{Complexities of KZG~\cite{KZG10a}}
+\label{s:complexity-kzg}
+In their paper on polynomial commitment schemes~\cite[Sec ]{KZG10a}, Kate, Zaverucha and Goldberg also discuss using their scheme to commit to a sequence of messages, thus implicitly obtaining a VC scheme.
+Although they do not analyze its complexity in their paper, we do so here.
+
+\parhead{Public Parameters.}
+The proving key is $\prk=(g^{\tau^i})_{i\in [0,n-1]}$ and is $O(n)$ sized.
+The verification key is $\vrk=(g,(g^{\tau^i})_{i\in |I|})$, where $|I|$ is the size of the largest subvector whose proof the verifier should be able to check, and is thus $O(|I|)$-sized.
+There is no support for updating commitments and proofs using update keys, although adding it is possible.
+
+\parhead{Commitment.}
+A commitment is $c=g^{\phi(\tau)}$ where $\phi(X)=\sum_{i\in [0,n)} \lagr_i(X) v_i$ and can be computed with $O(n\log^2{n})$ field operations (see \cref{s:prelim:interpolation}) and $O(n)$ exponentiations.
+Commitment updates are not discussed, but the scheme could be modified to support them.
+
+\parhead{Proofs for a $v_i$.}
+A proof for $v_i$ is:
+\begin{align}
+\pi_i = g^{\frac{\phi(\tau)-v_i}{\tau - i}} = g^{q_i(\tau)}
+\end{align}
+The proof is $O(1)$-sized and can be computed by dividing $\phi(X)$ by $(X-i)$ in $O(n)$ field operations, obtaining $q_i(X)$, and committing to $q_i(X)$ using the $g^{\tau^i}$'s in the \prk with $O(n)$ exponentiations.
+The proof can be verified in $O(1)$ time using $g^\tau$ from the \vrk by computing two pairings:
+\begin{align}
+e(c/g^{v_i}, g) = e(\pi_i, g^{\tau}/g^{i})
+\end{align}
+Proof updates are not discussed, but the scheme could be modified to support them (see \cref{s:asvc:from-kzg}).
+
+\parhead{Subvector Proofs for $(v_i)_{i\in I}$}
+A $O(1)$-sized subvector proof for $\vect{v}_I$ is:
+\begin{align}
+\pi_I=g^\frac{\phi(\tau)-R_I(\tau)}{A_I(\tau)}=g^{q_I(\tau)}
+\end{align}
+Here, $R_I(X)$ is interpolated in $O(|I|\log^2{|I|})$ field operations so that $R_I(i) = v_i,\forall i\in I$ (see \cref{s:prelim:interpolation}).
+Also, $A_I(X)= \prod_{i\in I} (X-i)$ is computed in $O(|I|\log^2{|I|})$ field operations via a \textit{subproduct tree}~\cite{vG13ModernCh10}.
+The quotient $q_I(X)$ can be obtained in $O(n\log{n})$ field operations via a DFT-based division~\cite{vG13ModernCh9}.
+Given $g^{\tau^i}$'s from the \prk, committing to $q_I(X)$ takes $O(n-|I|)$ exponentiations (because $\deg(q_I)\le\max(\deg(\phi),\deg(R_I))-\deg(A_I)=(n-1)-|I|$).
+Thus, the overall subvector proving time is $O(n\log{n}+|I|\log^2{|I|})$.
+
+To verify a subvector proof $\pi_I$, first, the verifier must recompute $R_I(X)$ and $A_I(X)$ in $O(|I|\log^2{|I|})$ field operations.
+Then, the verifier uses $(g^{\tau^i})_{i\in |I|}$ from the \vrk to compute KZG commitments $g^{R_I(\tau)}$ and $g^{A_I(\tau)}$ in $O(|I|)$ exponentiations.
+Finally, the verifier checks using two pairings if:
+\begin{align}
+e(c/g^{R_I(\tau)},g) &= e(\pi_I, g^{A_I(\tau)})
+\end{align}
+Thus, the overall subvector proof verification time is $O(|I|\log^2{|I|})$ time.
+
+\parhead{Aggregating Proofs and Precomputing All Proofs.}
+Aggregating proofs is not discussed, but the scheme can be modified to support them (see \cref{s:asvc:from-kzg:aggregating-proofs}).
+Finally, precomputing all proofs efficiently is not discussed, but is possible (see \cref{s:asvc:from-kzg}).
+Naively, it can be done inefficiently in $O(n^2)$ time.
+
+\subsection{Complexity of KZG$_\mathsf{Lagr}$~\cite{CDHK15}}
+\label{s:complexity-kzg-lagr}
+In this scheme, we assume the vector $\vect{v}=[v_1, v_2, \dots, v_n]$ is indexed from 1 to $n$.
+This scheme is similar to a KZG-based VC, except (1) it is randomized, (2) it computes proofs in a slightly different way and (3) it \textit{willfully} prevents aggregation of proofs as a security feature.
+
+\parhead{Public Parameters.}
+% need g^{\tau^{n+1}} for accumulator $X\prod_{i\in [n]}(X-i)$
+The proving key is $\prk=\left((g^{\tau^i})_{i\in [0,n+1]}, (g^{\lagr_i(\tau)})_{i\in[0,n]},g^{P(\tau)}\right)$, where $P(X)=x\cdot \prod_{i\in[n]} (X-i)$ and is $O(n)$ sized.
+(Note that the Lagrange polynomials $\lagr_i(X)=\prod_{j\in[0,n],j\ne i} \frac{X-j}{i-j}$ are defined over the points $[0,n]$, not $[n]$.)
+The verification key is $\vrk=(g,(g^{\lagr_i(\tau)})_{i\in [n]},(g^{\tau^i})_{i\in [0,|I|+1]})$, where $|I|$ is the maximum size of a subvector in a subvector proof, and is thus $O(n)$-sized.
+There is no support for updating commitments and proofs using update keys, although adding it is possible.
+
+\parhead{Commitment.}
+A commitment is $c=\prod_{i\in[n]} \left(g^{\lagr_i(\tau)}\right)^{v_i} \left(g^{P(\tau)}\right)^{r}= g^{\phi(\tau) + r\cdot P(\tau)}$ where $\phi(X)=\sum_{i\in [0,n]} \lagr_i(X) v_i$, with $v_0 = 0$.
+The commitment can be computed with $O(n)$ exponentiations, given the Lagrange commitments and $g^{P(\tau)}$ from \prk.
+However, since $\phi(X)$ is needed to compute proofs, this adds another $O(n\log^2{n})$ field operations.
+Commitment updates are not discussed, but they can be trivially implemented by setting $\upk_i = g^{\lagr_i(\tau)}$ and having $c' = c \cdot \left(g^{\lagr_j(\tau)}\right)^{\delta}$ be the new commitment after a change $\delta$ to $v_j$.
+We reflect this in \cref{t:asvc-comparison}.
+
+\parhead{Proofs for a $v_i$.}
+A proof for $v_i$ is:
+\begin{align}
+\pi_i = g^{\frac{\left(\phi(\tau)+r\cdot p(\tau)\right)-v_i\lagr_i(\tau)}{\tau - i}} = g^{q_i(\tau)}
+\end{align}
+The proof is $O(1)$-sized and can be computed by dividing $\phi(X)+r\cdot P(X)-v_i\lagr_i(X)$ by $(X-i)$ in $O(n)$ field operations, obtaining $q_i(X)$, and committing to $q_i(X)$ using the $g^{\tau^i}$'s in the \prk with $O(n)$ exponentiations.
+The proof can be verified in $O(1)$ time using $g^{\lagr_i(\tau)}$ from the \vrk by computing two pairings:
+\begin{align}
+e\left(c/\left(g^{\lagr_i(\tau)}\right)^{v_i}, g\right) = e(\pi_i, g^{\tau}/g^{i})
+\end{align}
+Proof updates are not discussed, but the scheme could be modified to support them (see \cref{s:asvc:from-kzg}).
+
+\parhead{Subvector Proofs for $(v_i)_{i\in I}$}
+A $O(1)$-sized subvector proof for $\vect{v}_I$ is:
+\begin{align}
+\pi_I=g^\frac{\phi(\tau)+r\cdot P(\tau) - R_I(\tau)}{A_I(\tau)}=g^{q_I(\tau)}
+\end{align}
+Here, $R_I(X)$ is defined so that $R_I(i) = v_i,\forall i\in I$ \textbf{and} $R_I(i) = 0, \forall i \in [0,n]\setminus I$.
+(In particular, this means $R_I(0) = 0$.)
+Interpolating $R_I(X)$ takes $O(n\log^2{n})$ field operations.
+Also, $A_I(X)= x\prod_{i\in I} (X-i)$ is computed in $O(|I|\log^2{|I|})$ field operations via a \textit{subproduct tree}~\cite{vG13ModernCh10}.
+Given $g^{\tau^i}$'s from the \prk, committing to $q_I(X)$ takes $O(n-|I|)$ exponentiations (because $\deg(q_I)\le \max(\deg(\phi),\deg(P),\deg(R_I))-\deg(A_I)=n-|I|$).
+Thus, the overall subvector proving time is $O(n\log^2{n})$.
+
+To verify a subvector proof $\pi_I$, first, the verifier recomputes the commitment to $g^{R_I(\tau)}=\sum_{i\in I} \left(g^{\lagr_i(\tau)}\right)^{v_i}$ using $O(|I|)$ exponentiations.
+(Recall that $\lagr_i(X)$ is defined over $[0,n]$ and has its KZG commitment in the \vrk.)
+Then, he computes $A_I(X)$ in $O(|I|\log^2{|I|})$ field operations using a \textit{subproduct tree}~\cite{vG13ModernCh10}.
+Then, the verifier uses $(g^{\tau^i})_{i\in [0,|I|+1]}$ from the \vrk to compute a KZG commitment to $g^{A_I(\tau)}$ in $O(|I|)$ exponentiations.
+Finally, the verifier checks using two pairings if:
+\begin{align}
+e(c/g^{R_I(\tau)},g) &= e(\pi_I, g^{A_I(\tau)})
+\end{align}
+Thus, the overall subvector proof verification time is $O(|I|\log^2{|I|})$.
+
+\parhead{Aggregating Proofs and Precomputing All Proofs.}
+Aggregating proofs is \textit{willfully} prevented by this scheme, as a security feature.
+Finally, precomputing all proofs efficiently is not discussed, but it can be done inefficiently in $O(n^2)$ time.
+Importantly, because the proofs are slightly different from KZG, they are not amenable to known techniques for precomputing all $n$ proofs in $O(n\log{n})$ time~\cite{FK20}.
+
+\subsection{Complexities of CPZ~\cite{CPZ18}}
+\label{s:complexity:cpz}
+
+Since the Edrax paper neatly summarizes its performance, we mostly refer the reader to~\cite[Table 1]{CPZ18}, with one exception discussed below.
+
+\parhead{Aggregating Proofs and Precomputing All Proofs.}
+Aggregating proofs is not discussed and it is unclear if the scheme can be modified to support it.
+Precomputing all proofs efficiently is not discussed either to the best of our knowledge, but it is possible.
+The key idea is to notice that computing $n$ proofs separately actually repeats a lot of work.
+If we avoid re-doing previously-done work, all proofs can be computed in $O(n\log{n})$ time.
+We reflect this in \cref{t:asvc-comparison}.
+
+\subsection{Complexities of TCZ~\cite{TCZ+20,Tomescu20}}
+\label{s:complexity-tcz}
+
+In their paper on scaling threshold cryptosystems, Tomescu et al.~\cite{TCZ+20} present a technique for computing $n$ \textit{logarithmic-sized} evaluation proofs for a KZG committed polynomial of degree $t$ in $O(n\log{t})$ time.
+Later on, Tomescu describes a full VC based on this technique from KZG commitments~\cite[Sec  9.2]{Tomescu20}.
+
+\parhead{Public Parameters.}
+The proving key is $\prk=((g^{\tau^i})_{i\in [0,n-1]},(g^{\lagr_i(\tau)})_{i\in [0,n)})$ and is $O(n)$ sized.
+Importantly, $n$ is assumed to be a power of two, and $\lagr_i(X)=\prod_{j\in [0,n),j\ne i} \frac{X-\omega^j}{\omega^i - \omega^j}$ where $\omega$ is a primitive $n$th root of unity~\cite{vG13ModernCh8}.
+The verification key is $\vrk=(g,(g^{\tau^{2^i}})_{i\in [\floor{\log_2{(n-1)}}]}, (g^{\tau^i})_{i\in |I|})$, where $|I|$ is the size of the largest subvector whose proof the verifier should be able to check, and is thus $O(|I|)$-sized.
+The $i$th update key $\upk_i$ is the \textit{authenticated multipoint evaluation tree (AMT)} of $\lagr_i(X)$ at all points $(\omega^i)_{i\in [0,n)}$ (see \cite[Sec III-B]{TCZ+20} and~\cite[Ch 9]{Tomescu20}).
+This AMT will be $O(\log{n})$-sized, consisting of a single path of non-zero quotient commitments leading to the evaluation of $\lagr_i(\omega^i)$~\cite[Sec 9.2.2]{Tomescu20}.
+
+\parhead{Commitment.}
+A commitment is $c=g^{\phi(\tau)}$ where $\phi(\omega^i)=v_i,\forall i\in[0,n)$ so that $\phi(X)$ can be computed with $O(n\log{n})$ field operations via an inverse Discrete Fourier Transform (DFT)~\cite[Ch 30.2]{CLRS09} and $O(n)$ exponentiations.
+Commitment updates remain the same as in the KZG-based scheme from \cref{s:complexity-kzg-lagr}: $c' = c\cdot \left(g^{\lagr_j(\tau)}\right)^{\delta}$, where $\delta$ is the change at position $j$ in the vector and the Lagrange polynomial commitment can be obtained from $\upk_j$.
+
+\parhead{Proofs for a $v_i$.}
+A proof for $v_i$ is:
+\begin{align}
+\pi_i = (g^{q_w(\tau)})_{w\in \left[1+\floor{\log{(n-1)}}\right]}
+\end{align}
+Here, each $q_w(X)$ is a quotient polynomial along the AMT tree path to $\phi(\omega^i)$.
+The proof is $O(\log{n})$-sized and can be computed by ``repeatedly'' dividing $\phi(X)$ by accumulator polynomials of ever-decreasing sizes $n/2, \dots, 4,2,1$ in $T(n)=O(n\log{n}) + T(n/2) = O(n\log{n})$ field operations, and committing to each $q_w(X)$ using the $g^{\tau^i}$'s in the \prk with $T'(n) = O(n) + T'(n/2)=O(n)$ exponentiations.
+(``Repeatedly'' dividing means we first divide $\phi(X)$ by a degree $n/2$ accumulator. Then, we take the remainder of this division and divide it by the degree $n/4$ accumulator. We then take this remainder and divide it by a degree $n/8$ accumulator. And so on, ensuring the remainder degrees always halve.)
+% i.e., T(n) = n(\log{n} + 1/2\log{n/2} + 1/4 \log{n/4} + ...) \le n(\log{n} + 1/2 \log{n} + 1/4 \log{n} + ....) \le n(2*\log{n})
+The proof can be verified in $O(\log{n})$ time using the $g^{\tau^{2^i}}$'s from the \vrk:
+\begin{align}
+e(c/g^{v_i}, g) = \prod_{w\in \left[1+\floor{\log{(n-1)}}\right]}e(g^{q_w(\tau)}, g^{a_w(\tau)})
+\end{align}
+Here, the $a_w(X)$'s denote the accumulator polynomials along the AMT path to $\phi(\omega^i)$, which are always of the form $X^{2^i} - c$ for some constant $c$ and some $i\in [0,\floor{\log{(n-1)}}]$.
+
+\parhead{Proof Updates.}
+If any vector element $v_j$ changes to $v_j + \delta$, the proof $\pi_i$ can be updated in $O(\log{n})$ time.
+(It could be that $j=i$.)
+The idea is to consider the quotient commitments $g^{q_{w}(\tau)}$ along $\pi_i$'s AMT path and the $g^{u_w(\tau)}$ commitments along $\upk_j$'s AMT path.
+For all locations $w$ where the two paths intersect, the quotient commitments are combined in constant time as $g^{q'_w(\tau)} = g^{q_w(\tau)} \cdot \left(g^{u_w(\tau)}\right)^\delta.$
+Since there are at most $O(\log{n})$ locations $w$ to intersect in, this takes $O(\log{n})$ exponentiations.
+This new $\pi_i'$ with quotient commitments $g^{q'_w(\tau)}$ will verify against the updated $c'$ commitment defined earlier.
+
+\parhead{Subvector Proofs for $(v_i)_{i\in I}$}
+This scheme uses the same subvector proof as the original KZG-based scheme in \cref{s:complexity-kzg}.
+Thus, the subvector proving time is $O(n\log{n}+|I|\log^2{|I|})$ and the subvector proof verification time is $O(|I|\log^2{|I|})$ time.
+
+\parhead{Aggregating Proofs and Precomputing All Proofs.}
+Aggregating proofs is not discussed and it is unclear if the scheme can be modified to support it.
+Precomputing all \textit{logarithmic-sized} proofs efficiently is possible via the AMT technique in $O(n\log{n})$ time.
+
+\subsection{Complexity of LY~\cite{GRWZ20,LY10} or ``Pointproofs''}
+\label{s:complexity:pointproofs}
+Gorbunov et al.~\cite{GRWZ20} enhance the VC by Libert and Yung~\cite{LY10} with the ability to aggregate multiple VC proofs into a subvector proof.
+(Additionally, they also enable aggregation of subvector proofs across different vector commitments, which they show is useful for stateless smart contract validation in cryptocurrencies.)
+In this scheme, we assume the vector $\vect{v}=[v_1, v_2, \dots, v_n]$ is indexed from 1 to $n$.
+
+\parhead{Public Parameters.}
+Their scheme works over Type III pairings $e : \G_1 \times G_2\rightarrow G_T$.
+Let $g_1,g_2,g_T$ be generators of $\G_1, \G_2$ and $\G_T$ respectively.
+The proving key $\prk = ((g_1^{\alpha^i})_{i\in[0,2n]\setminus\{n-1\}},(g_2^{\alpha^i})_{i\in[0,n]}, g_T^{\alpha^{n+1}})$.
+Note that $g_1^{\alpha^{n+1}}$ is ``missing'' from the proving key, which is essential for security.
+The verification key $\vrk=((g_2^{\alpha^i})_{i\in[1,n]},g_T^{\alpha^{n+1}})$.
+The $i$th update key $\upk_i=g_1^{\alpha^i}$.
+They only support updating commitments, but proofs could be made updatable at the cost of linear-sized update keys.
+
+\parhead{Commitment.}
+A commitment is $c=\prod_{i\in[n]} \left(g_1^{\alpha^i}\right)^{v_i}=g_1^{\sum_{i\in [n]} v_i\alpha^i}$ and can be computed with $O(n)$ exponentiations.
+If any vector element $v_j$ changes to $v_j + \delta$, the commitment can be updated in $O(1)$ time using as $c' = c \cdot (\upk_j)^{\delta} = c\cdot (g_1^{\alpha^j})^{\delta}$.
+
+\parhead{Proofs for a $v_i$.}
+A proof for $v_i$ is obtained by re-committing to $v$ so that $v_i$ lands at position $n+1$ (i.e., has coefficient $\alpha^{n+1}$) rather than position $i$ (i.e., has coefficient $\alpha^i$).
+Furthermore, this commitment will \textbf{not} contain $v_i$: it cannot, since that would require having $g_1^{\alpha^{n+1}}$.
+To get position $i$ to $n+1$, we must ``shift'' it (and every other position) by $n + 1 - i$.
+Thus, the proof is:
+\begin{align}
+\pi_i &= g_1^{\sum_{j\in[n]} v_j \alpha^{j + (n+1) - i}}\\
+      &= (c / g_1^{v_i \alpha^i})^{\alpha^{(n+1) - i}}
+\end{align}
+The proof is constant-sized and can be computed with $O(n)$ exponentiations.
+It can be verified in $O(1)$ time using $g_2^{\alpha^{(n+1) - i}}$ from \vrk:
+\begin{align}
+e(c, g_2^{\alpha^{(n+1)-i}})=e(\pi_i, g_2) \left(g_T^{\alpha^{n+1}}\right)^{v_i}
+\end{align}
+Updating the proof is not discussed but is possible in $O(1)$ time the update keys are tweaked to be linear rather than constant-sized.
+
+\parhead{Subvector Proofs for $(v_i)_{i\in I}$}
+A $O(1)$-sized subvector proof for $\vect{v}_I$ is a product of individual, randomized proofs $\pi_i,\forall i\in I$.
+First, all $|I|$ proofs $\pi_i$ are computed in $O(|I|n)$ exponentiations as described above.
+Second, for each $i\in I$, $t_i = H(c, I, {v_i}_{i\in I})$ is computed using a random oracle $H : \{0,1\}^*\rightarrow \Zp$.
+Third, the subvector proof $\pi_I$ is computed as:
+\begin{align}
+\pi_I = \prod_{i\in I} \pi_i^{t_i}
+\end{align}
+Thus, the overall time to compute a subvector proof is $O(|I|n)$.
+The subvector proof can be verified in $O(|I|)$ time using $(g_2^{\alpha^{(n+1) - i}})_{i\in I}$ from \vrk as:
+\begin{align}
+e\left(c, \prod_{i\in I}\left(g_2^{\alpha^{(n+1)-i}}\right)^{t_i}\right) &= e(\pi_I, g_2) \left(g_T^{\alpha^{n+1}}\right)^{\sum_{i\in I} v_i t_i}\Leftrightarrow\\
+e\left(c, g_2^{\sum _{i\in I}t_i \alpha^{(n+1)-i}}\right) &= e\left(\prod_{i\in I} \pi_i^{t_i}, g_2\right) g_T^{\alpha^{n+1}\sum_{i\in I} v_i t_i}\Leftrightarrow\\
+ &= e\left(\prod_{i\in I} \pi_i^{t_i}, g_2\right) e\left(g_1^{\alpha^{n+1}\sum_{i\in I} v_i t_i}, g_2\right)\Leftrightarrow\\
+ &= e\left(\prod_{i\in I} \pi_i^{t_i} \cdot g_1^{\alpha^{n+1}\sum_{i\in I} v_i t_i},g_2\right)\Leftrightarrow\\
+ &= e\left(\prod_{i\in I} \pi_i^{t_i} \cdot \prod_{i\in I} g_1^{\alpha^{n+1} v_i t_i},g_2\right)\Leftrightarrow\\
+ &= e\left(\prod_{i\in I} \left(\pi_i \cdot g_1^{\alpha^{n+1} v_i}\right)^{t_i},g_2\right)
+\end{align}
+Recall that $\pi_i= (c / g_1^{v_i \alpha^i})^{\alpha^{(n+1) - i}}$.
+\begin{align}
+e\left(c, g_2^{\sum _{i\in I}t_i \alpha^{(n+1)-i}}\right) &= e\left(\prod_{i\in I} \left((c / g_1^{v_i \alpha^i})^{\alpha^{(n+1) - i}} \cdot g_1^{\alpha^{n+1} v_i}\right)^{t_i},g_2\right)\Leftrightarrow\\
+ &= e\left(\prod_{i\in I} \left((c / g_1^{v_i \alpha^i}) \cdot g_1^\frac{\alpha^{n+1} v_i}{\alpha^{(n+1) - i}}\right)^{t_i \alpha^{(n+1) - i}},g_2\right)\Leftrightarrow\\
+ &= e\left(\prod_{i\in I} \left((c / g_1^{v_i \alpha^i}) \cdot g_1^{v_i\alpha^i}\right)^{t_i \alpha^{(n+1) - i}},g_2\right)\Leftrightarrow\\
+ &= e\left(\prod_{i\in I} c^{t_i \alpha^{(n+1) - i}},g_2\right)\Leftrightarrow\\
+ &= e\left( c^{\sum_{i\in I}t_i \alpha^{(n+1) - i}},g_2\right)\Leftrightarrow\\
+ &= e\left( c,g_2^{\sum_{i\in I}t_i \alpha^{(n+1) - i}}\right)
+\end{align}
+
+\parhead{Aggregating Proofs and Precomputing All Proofs.}
+Recall that a subvector proof works only through aggregating individual proofs and that the cost of aggregation was computing $|I|$ hashes and an $O(|I|)$-sized multi-exponentiation.
+Thus, aggregation takes $O(|I|)$ time.
+Finally, precomputing all proofs efficiently is not discussed.
+Naively, it can be done in $O(n^2)$ time.
+
+\subsection{Complexity of our Lagrange-based aSVC from \cref{s:asvc:from-kzg}}
+\label{s:complexity-lagrange-asvc}
+Our scheme builds upon previous VCs using KZG commitments~\cite{CDHK15, KZG10a}.
+Since we give its full algorithmic description in \cref{s:asvc:from-kzg:algorithms}, this section will be briefer than previous ones.
+
+\parhead{Public Parameters.}
+The proving key, verification key and $i$th update key are $O(n), O(|I|)$ and $O(1)$-sized, respectively.
+Similar to \cref{s:complexity-tcz}, $n$ is assumed to be a power of two, and $\lagr_i(X)=\prod_{j\in [0,n),j\ne i} \frac{X-\omega^j}{\omega^i - \omega^j}$ where $\omega$ is a primitive $n$th root of unity~\cite{vG13ModernCh8}.
+
+\parhead{Commitment.}
+A commitment is $c=\prod_{i\in[0,n)} \ell_i^{v_i}=g^{\phi(\tau)}$ where $\phi(X)=\sum_{i\in [0,n)} \lagr_i(X) v_i$ and $\phi(\omega^i) = v_i$.
+If any vector element $v_j$ changes to $v_j + \delta$, the commitment can be updated in $O(1)$ time using as $c' = c \cdot (\upk_j)^{\delta} = c\cdot (\ell_j)^{\delta}$.
+
+\parhead{Proofs for a $v_i$.}
+\label{s:complexity-lagrange-asvc:proof}
+A proof for $v_i$ is:
+\begin{align}
+\pi_i = g^{\frac{\phi(\tau)-v_i}{\tau - \omega^i}} = g^{q_i(\tau)}
+\end{align}
+However, note that:
+\begin{align}
+\frac{\phi(\tau)-\phi(\omega^i)}{\tau - \omega^i}
+ &= \frac{\sum_{j\in [0,n)} \lagr_j(\tau) v_j - v_i}{\tau - \omega^i}\\
+ &= \frac{\sum_{j\in [0,n)\setminus \{i\}} \lagr_j(\tau) v_j}{\tau - \omega^i} + \frac{\lagr_i(\tau)v_i - v_i}{\tau - \omega^i}\\
+  &= \sum_{j\in [0,n)\setminus \{i\}}v_j\frac{\lagr_j(\tau)}{\tau - \omega^i} + v_i\frac{\lagr_i(\tau) - 1}{\tau - \omega^i}
+\end{align}
+Recall from \cref{s:asvc:from-kzg:updating-proofs} that (1) the $i$th update key contains a KZG commitment $u_i$ to $\frac{\lagr_i(\tau) - 1}{\tau - \omega^i}$ and that (2) the $a_i$'s and $a_j$'s from $\upk_i$ and $\upk_j$ can be used to compute in $O(1)$ time a KZG commitment $u_{i,j}$ to $\frac{\lagr_j(\tau)}{\tau - \omega^i}$.
+(Note that the partial fraction decomposition only requires evaluating a degree-1 polynomial at two points. Also, computing $A'(\omega^j)$ can be done in $O(1)$ time as explained in \cref{app:xn-1-derivative}.)
+Thus, the proof $\pi_i$ can be computed in $O(n)$ field operations and $O(n)$ exponentiations as:
+\begin{align}
+\pi_i &= g^{q_i(\tau)}=\prod_{j\in [0,n)\setminus \{i\}} \left(u_{i,j}\right)^{v_j} \cdot \left(u_i\right)^{v_i}
+\end{align}
+
+The proof can be verified in $O(1)$ time using $g^\tau$ from the \vrk by computing two pairings:
+\begin{align}
+e(c/g^{v_i}, g) = e(\pi_i, g^{\tau}/g^{\omega^i})
+\end{align}
+
+\parhead{Proof Updates.}
+If any vector element $v_j,j\ne i$ changes to $v_j + \delta$, the proof $\pi_i$ can be updated in $O(1)$ time using $a_i,a_j$ from $\upk_i,\upk_j$.
+First, one computes $u_{i,j}$ in $O(1)$ time as described in the previous paragraph.
+Then, one updates $\pi_i' = \pi_i \cdot \left(u_{i,j}\right)^{\delta}$ in $O(1)$ time.
+This new $\pi_i'$ will verify against the updated $c'$ commitment defined earlier.
+If $v_i$ changes to $v_i + \delta$, the proof $\pi_i$ is updated in $O(1)$ time using $u_i$ from $\upk_i$ as $\pi_i' = \pi_i \cdot \left(u_i\right)^{\delta}$ (see \cref{s:asvc:from-kzg:updating-proofs}).
+
+\parhead{Subvector Proofs for $(v_i)_{i\in I}$}
+We use the same style of subvector proofs as in \cref{s:complexity-kzg}.
+Thus, the subvector proving time is $O(n\log{n}+|I|\log^2{|I|})$ and the subvector proof verification time is $O(|I|\log^2{|I|})$ time.
+
+\parhead{Aggregating Proofs and Precomputing All Proofs.}
+Aggregating all proofs $(\pi_i)_{i\in I}$ requires computing coefficients $c_i=1/A'_I(\omega^i),\forall i \in I$ using partial fraction decomposition (see \cref{s:asvc:from-kzg:aggregating-proofs}).
+This can be done by (1) computing $A_I(X)=\prod_{i \in I} (X-\omega^i)$ in $O(|I|\log^2{|I|})$ field operations, (2) computing its derivative $A'_I(X)$ in $O(|I|)$ field operations and (3) evaluating $A'_I(X)$ at all $(\omega^i)_{i\in I}$ using a multipoint evaluation in $O(|I|\log^2|I|)$ field operations~\cite{vG13ModernCh10}.
+Then, the subvector proof can be aggregated with $O(|I|)$ exponentiations as:
+\begin{align}
+\pi_I = \prod_{i\in I}\pi_i^{c_i}
+\end{align}
+Thus, aggregation takes $O(|I|\log^2{|I|})$ time.
+
+Finally, precomputing all proofs can be done efficiently in $O(n\log{n})$ time using the FK technique~\cite{FK20}.
+
+\parhead{Slower Commitment Time for Faster Subvector Prove Time.}
+When comitting to a vector, we can use the FK technique to precompute all $n$ proofs in $O(n\log{n})$ time and store them as \textit{auxiliary information}.
+Then, we can serve any individual proof $\pi_i$ in $O(1)$ time and any subvector proof in $O(|I|\log^2{|I|})$ time by aggregating it from the $\pi_i$'s.

@@ -1,0 +1,163 @@
+\section{Complexity of VCs Based on Hidden-order Groups}
+\label{s:complexity:hog}
+
+\tableVcRsaComparison{rsa-asvc-comparison-appendix}
+
+We give complexities of VCs based on hidden-order groups in \cref{t:rsa-asvc-comparison-appendix}.
+These can be challenging to describe succinctly due to the many variable-length integer operations that arise.
+In an effort to keep complexities simple without leaving out too much detail, we often measure (and even approximate) complexities in terms of operations in a finite field of size $2^{2\lambda}$ (e.g., additions, multiplications, computing \bezout coefficients, Shamir tricks), where $\lambda$ is our security parameter.
+Another reason to do so is for fairness with VC schemes in known-order groups, which also count operations in finite fields of size $2^{2\lambda}$.
+Otherwise a $2\lambda$-bit multiplication would be counted as $O(\lambda \log\lambda)$ in schemes such as BBF$_\ell$~\cite{BBF18}\footnote{Assuming recent progress on multiplying $b$-bit integers in $O(b\log{b})$ time.} and as $O(1)$ time for schemes like KZG (see \cref{s:complexity-kzg}).
+
+\parhead{The Shamir Trick.}
+The ``Shamir Trick''~\cite{Shamir83,BBF18} can be used to compute an $e$th root of $g$ given an $e_1$th root and an $e_2$th root where $e=e_1 e_2$ and $\gcd(e_1,e_2)=1$.
+The idea is to compute \bezout coefficients $a,b$ such that $a e_1 + b e_2 = 1$.
+Then, $\left(g^\frac{1}{e_1}\right)^b \left(g^\frac{1}{e_2}\right)^a=g^\frac{b e_2}{e_1 e_2} g^\frac{a e_1}{e_1 e_2} = g^\frac{a e_1 + b e_2}{e_1 e_2} = g^\frac{1}{e_1 e_2}$.
+Note that $|a|\approx|e_2$ and $|b|\approx|e_1|$.
+
+\subsection{Complexity of BBF$_\ell$~\cite{BBF18,BBF19}}
+\label{s:complexity-bbf}
+In this scheme, we assume the vector $\vect{v}=[v_1, v_2, \dots, v_n]$ is indexed from 1 to $n$.
+
+\parhead{Public Parameters.}
+Let $\ell$ denote the size of vector elements in bits.
+Let $n$ denote the number of vector elements.
+Let $N=\ell n$.
+Let $\Gho$ denote a hidden-order group and $g$ be a random group element in $\Gho$.
+Let $H : [N] \rightarrow \mathsf{Primes}$ be a bijective function that on input $i$ outputs the $i$th prime number $p_i$.
+(Note that $|p_N|=\lln$ bits.)
+The \prk,\vrk consists of $g$.
+This scheme does not support ``fixed'' update keys compatible with our definitions.
+Instead, the $i$th update key w.r.t. a commitment $c$ is ``dynamic'' and consists of a VC proof for $v_i$ that verifies against $c$.
+This does not appear to be problematic as our $\vcverifyupk$ definition (see \cref{s:asvc:defs}) can be updated to verify the $\upk$ against the commitment $c$.
+
+\parhead{Commitment.}
+An $\ell$-bit vector element $v_i$ can be written as a vector of $\ell$ bits $(v_{i,j})_{j\in [0,\ell-1]}$
+Then, each bit $v_{i,j}$ is mapped to the unique prime $p_{(i-1)\cdot \ell + j}$.
+Put differently, each $v_i$ is mapped to $\ell$ unique primes $(p_{(i-1)\cdot \ell}, p_{(i-1)\cdot \ell + 1},\dots, p_{(i-1)\cdot \ell+ (\ell - 1)})$.
+Then, for each $v_i$, take the product of all primes corresponding to non-zero bits as $P_i = \prod_{j\in[0,\ell-1]} {v_{i,j}}\cdot \left(p_{(i-1)\cdot \ell + j}\right)$.
+Note that $|P_i| = O(\ell \lln)$.
+A commitment to the vector $\vect{v}=(v_i)_{i\in [n]}$ will be an RSA accumulator over these $P_i$'s:
+\begin{align}
+c
+  &=g^{\prod_{i\in [n]}\prod_{j\in[0,\ell-1]} v_{i,j}\cdot \left( p_{(i-1)\cdot \ell + j} \right)}\\
+  &=g^{\prod_{i\in [n]} P_i}
+\end{align}
+
+The exponent of $c$ is a product of at most $\ell n$ primes, with the biggest prime having size $O(\lln)$.
+Thus, computing the $O(1)$-sized commitment $c$ takes $O(\ell n \lln)$ group operations.
+(Note that, for hidden-order groups, we are counting group operations rather than exponentiations.
+This is to give a better sense of performance, which varies with the exponent size, since exponents cannot be ``reduced'' in hidden-order groups.)
+
+Before discussing updating commitments, we must first discuss how a VC proof for $v_i$ works.
+
+\subsubsection{Proofs for a $v_i$}
+A proof $\pi_i$ for $v_i$ must show two things:
+\begin{enumerate}
+\item That $P_i$ corresponding to all non-zero bits is accumulated in $c$.
+\item That $Z_i= \prod_{j\in[0,\ell-1]} {(1-v_{i,j})}\cdot \left(p_{(i-1)\cdot \ell + j}\right)$ corresponding to all zero bits is \textit{not} accumulated in $c$.
+(Note that $|Z_i|=|P_i|=O(\ell\lln)$.)
+\end{enumerate}
+
+\parhead{Proving One Bits are Accumulated.}
+To prove $P_i$ is ``in'', an $O(1)$-sized RSA accumulator subset proof w.r.t. $c$ can be computed with $O(\ell n \lln)$ group operations (via \textit{A}.$\mathsf{NonMemWitCreate}^*$ in~\cite[Sec 4.2, pg. 15]{BBF18}):
+\begin{align}
+\pi_i^{[1]} &=g^{\prod_{j\in [n],j \ne i} P_j} = c^{1/P_i}
+\end{align}
+
+To speed up the verification of this (part of) the proof, a constant-sized \textit{proof of exponentiation (PoE)}~\cite{BBF18} is computed in $O(\ell\lln)$ field and group operations.
+We discuss this later in~\cref{s:complexity-bbf:verify-one-proof}.
+% These correspond to dividing $P_i$, which is $O(\ell \log{(\ell n)})$-sized by a random $O(\lambda)$-bit number in the PoE proof computation & verification (see~\cite[Sec 4.2.1, pg. 48]{Tomescu20}).
+% We have to say it takes at least $\ell\log{\ell n}$ time, which is the size of $|P_i|$.
+
+\parhead{Proving Zero Bits are Accumulated.}
+To prove $Z_i$ is ``out'', an $O(\ell \lln)$-sized disjointness proof $\pi_i^{[0]}$ can be computed w.r.t. $c$ (via \textit{A}.$\mathsf{NonMemWitCreate}$ in~\cite[Sec 4.1, pg. 14]{BBF18}).
+First, $Z_i$ must be computed, but we assume this can be done in $O(\ell\lln)$ field operations.
+Second, \bezout coefficients are computed such that $\alpha \prod_{i\in n} P_i + \beta Z_i =1$.
+Then, the disjointness proof is $\pi_i^{[0]}=(g^{\beta},\alpha)$.
+Since $|\alpha| \approx |Z_i|$, the proof is $O(\ell \lln)$-sized.
+Although this disjointness proof can be made $O(1)$-sized via \textit{proofs of knowledge of exponent (PoKE)} proofs, this seems to break the ability to aggregate VC proofs in BBF$_\ell$~\cite[Sec 5.2, pg. 20]{BBF18}.
+However, the prover can still include two constant-sized  PoE proofs for $(g^{\beta})^{Z_i}$ and for $c^{\alpha}$ to make the verifier's job easier, which costs him only $O(\ell \lln)$ field and group operations.
+
+To analyze the time complexity of computing $\pi_i^{[0]}$, recall that:
+\begin{enumerate}
+    \item The asymptotic complexity of computing \bezout coefficients on $b$-bit numbers is $O(b\log^2{b})$ time.
+    \item $b=\left|\prod_{i\in n} P_i\right|=O(n\ell \lln)$.
+\end{enumerate}
+As a result, the \bezout coefficients take $O((n\ell\lln) \log^2{(n \ell\lln)=O(n\ell\lln (\log{n\ell} + \log{\lln})^2)}=O(n\ell\log^3(\ell n))$ time.
+However, since these are bit operations, we will count them as $O(n\ell \lln)$ field operations.
+Furthermore, computing $g^{\beta}$, where $|\beta|\approx|\prod_{i\in[n]}P_i|=O(n\ell\lln)$ takes $O(n\ell\lln)$ group operations.
+
+Overall, the time to compute $\pi_i$ is $O(\ell n\lln)=O(\ell n\log{n})$.
+
+\subsubsection{Verifying a Proof for $v_i$}
+\label{s:complexity-bbf:verify-one-proof}
+
+To verify $\pi_i = (\pi_{i}^{[0]}, \pi_i^{[1]})$, the verifier proceeds as follows.
+First, he computes $P_i$ in $O(\ell\lln)$ field operations.
+Second, he checks that $\left(\pi_i^{[1]}\right)^{P_i} = c$ via the PoE proof in $\pi_i^{[1]}$ using $O(\lambda)$ group operations and $O(\ell\log{n})$ field operations.
+First, he parses $(g^{\beta}, \alpha)$ from $\pi_i^{[0]}$ and checks if $(g^{\beta})^{Z_i} c^\alpha=g$.
+Since the prover included PoE proofs, this can be verified with $O(\lambda)$ group operations and $O(\ell\lln)$ field operations.
+
+\subsubsection{Updates}
+\label{s:complexity-bbf:proof-updates}
+
+\parhead{Updating Commitments.}
+Suppose $v_i$ changes $v_i'$.
+For message bits that are changed from $0$ to $1$, updating the commitment $c$ involves ``accumulating'' new primes associated with those bits in $c$.
+For message bits that are changed from $1$ to $0$, updating $c$ involves removing the primes associated with those bits from $c$.
+Recall that, unlike other VC schemes, the update key $\upk_i$ is set to be the VC proof $\pi_i$ that verifies against $c$.
+Also recall that $\pi_i^{[1]}=c^{1/P_i}$ from $\pi_i$ is exactly the commitment $c$ without any of the primes associated with $v_i$.
+Thus, to update the commitment, we can compute $P_i'=\prod_{j\in [0,\ell-1]} v'_{i,j} p_{(i-1)\cdot\ell + j}$ in $O(\ell)$ field operations and set $c' = \left(\pi_i^{[1]}\right)^{P_i'}$ in $O(\ell \lln)$ group operations.
+
+To process several updates for many updated elements $(v_i)_{i\in I}$ with $\upk_i$'s that all verify w.r.t. $c$, we have to take an additional step.
+First, we use $O(|I|)$ \textit{Shamir tricks}~\cite{BBF18} on all the $\pi_i^{[1]}$'s to obtain the commitment $c^{1/\prod_{i\in I} P_i}$.
+This commitment does not have any primes associated with the old elements $(v_i)_{i\in I}$.
+Then, we can add back the new primes $P_i'$ associated with the new elements $(v'_i)_{i\in I}$ in $O(|I|\ell \lln)$ group operations.
+We assume the $O(|I|)$ Shamir tricks can be done in $O(|I|)$ field operations.
+
+\parhead{Updating Proofs.}
+Proof updates are not discussed in~\cite{BBF19}, but seem possible.
+We leave it to future work to describe them and their complexity.
+
+\subsubsection{Subvector Proofs for $(v_i)_{i\in I}$}
+Recall that a normal VC proof for $v_i$ reasons about which primes associated with $v_i$ are (not) accumulated in $c$.
+A subvector proof will do the same, except it will reason about primes associated with all $(v_i)_{i\in I}$.
+Thus, instead of reasoning about two $O(\ell \lln)$-sized $P_i$ and $Z_i$, it will reason about two $O(|I|\ell\lln)$-sized $\prod_{i\in I} P_i$ and $\prod_{i\in I} Z_i$.
+This does not affect the proof size, but affects the proving time in two ways.
+
+First, computing $\pi_i^{[1]}$ can be done faster in $O(\ell (n-|I|) \lln)$ group operations.
+However, this speedup is negated by an increase in the time to compute its associated PoE to $O(|I|\ell\lln)$ field and group operations.
+Second, computing $\pi_i^{[0]}$ maintains the same asymptotic complexity, since it is dominated by computing $g^\beta$, which remains just as expensive.
+However, $\pi_i^{[0]}$'s size will increase to $O(|I|\ell\lln)$, since the \bezout coefficient $\alpha$ will be roughly of size $|\prod_{i\in I} Z_i|$.
+Fortunately, the prover can avoid this by giving $c^\alpha$ rather than $\alpha$ along with a PoKE proof (i.e., one group element and one $2\lambda$-bit integer), while maintaining the same asymptotic complexity.
+As before, the prover also gives a PoE proof for $\left(g^{\beta}\right)^{Z_i}$ to speed up the verifier's job.
+
+Because of the PoE proof, verification of $\pi_i^{[1]}$ only requires $O(\lambda)$ group operations as before but the number of field operations increases to $O(|I|\ell\lln)$.
+Similarly, the PoKE proofs will speed up verification of $\pi_i^{[0]}$ to $O(\lambda)$ group operations but the $O(|I|\ell\lln)$ field operations remain for verifying the PoE proof for $\left(g^{\beta}\right)^{Z_i}$.
+
+\subsubsection{Aggregating Proofs}
+Since aggregating RSA membership and non-membership witnesses is possible~\cite{BBF18}, and BBF$_\ell$ VC proofs consist of one RSA membership (subset) proof and one non-membership (disjointness) proof, it follows that aggregating proofs is possible.
+We leave it to future work to analyze the complexity of aggregation, which has to be at least $\Omega(|I|\ell\lln)$ since it must read all $|I|$ VC proofs as input, which are each $O(\ell\lln)$-sized.
+
+\subsubsection{Precomputing All Proofs}
+Computing all membership and non-membership witnesses for an RSA accumulators over $N$ elements is possible in $O(N\log{N})$ exponentiations~\cite{BBF18,SSY01}.
+Since for BBF$_\ell$ we have $N=\ell n$ and an exponentiation costs $O(\lln)$ group operations, this would take $O(\ell n \log^2{(\ell n)})$ group operations.
+We are ignoring (1) the overhead of aggregating membership and non-membership witnesses and (2) the overhead of computing PoE proofs, which we assume is dominated by the cost to compute the witnesses.
+
+\subsection{Complexity of \cfgOne~\cite{CFG+20} and \cfgTwo~\cite{CF13,LM18,LM19,CFG+20}}
+We refer the reader to~\cite[Table 1, pg. 35]{CFG+20} for most of these these complexities.
+
+\parhead{Aggregating Proofs.}
+For CFG$_{\ell}^1$, aggregating $|I|$ proofs into an $I$-subvector proof takes $O(|I|\log{|I|}\log{N})$ group operations~\cite[Sec 5.1, pg. 23]{CFG+20}.
+For CFG$_{\ell}^2$, this takes $O(\ell |I|\log^2{|I|})$ group operations~\cite[Sec 5.2, pg. 32]{CFG+20}.
+
+\parhead{Updating Proofs and Commitments.}
+The paper does not discuss updating proofs and commitments, although this seems possible.
+
+\parhead{Precomputing All Proofs.}
+Unfortunately,~\cite{CFG+20} does not address precomputing all proofs efficiently.
+Nonetheless, this seems possible in CFG$_\ell^{1}$.
+We believe the time will be dominated by the complexity of computing all $N=\ell n$ RSA accumulator membership witnesses in $O(N\log^2{N})$ group operations.
+Furthermore, since CFG$_\ell^{2}$ supports disaggregation, all proofs can be computed efficiently using a disaggregation-based divide-and-conquer approach.
+We estimate this will take $O(\ell n\log^2{n})$ group operations.

@@ -1,0 +1,158 @@
+\section{Aggregatable Subvector Commitment (aSVC) Schemes}
+\label{s:svc}
+
+In this section, we introduce the notion of \textit{aggregatable subvector commitments (aSVCs)} as a natural extension to \textit{subvector commitments (SVCs)}~\cite{LM19}.
+Specifically, in an aSVC anybody can aggregate $b$ proofs for individual positions into a single constant-sized \textit{subvector proof} for those positions.
+Our formalization differs from previous work~\cite{BBF18,GRWZ20,CFG+20} in that it accounts for update keys as the (verifiable) auxiliary information needed to update commitments and proofs.
+This is useful in distributed settings where the public parameters of the scheme are split amongst many participants, such as in stateless cryptocurrencies.
+In \cref{s:asvc:from-kzg}, we introduce an efficient aSVC construction \textit{with scalable updates} from KZG commitments to Lagrange polynomials.
+
+\subsection{aSVC API}
+\label{s:prelim:vcs:api}
+\label{s:asvc:defs}
+
+Our API resembles the VC API by Chepurnoy et al.~\cite{CPZ18} and the SVC API by Lai and Malavolta~\cite{LM19}.
+However, we add a \vcverifyupk API for verifying update keys and a \vcaggregateproofs API for aggregating proofs.
+We stress that \vcverifyupk is necessary in distributed applications such as stateless cryptocurrencies (see \cref{s:stateless-cryptocurrency:dos-update-key}).
+\\
+
+\api $\vcsetup(1^\lambda, n)\rightarrow \prk,\vrk,(\upk_j)_{j\in[0,n)}$.
+Randomized algorithm that, given a security parameter $\lambda$ and an upper-bound $n$ on vector size, returns a \textit{proving key} \prk, a \textit{verification key} \vrk and \textit{update keys} $(\upk_j)_{j\in[0,n)}$.
+
+\api $\vccommit(\prk, \vect{v}) \rightarrow c$.
+Deterministic algorithm that returns a commitment $c$ to any vector $\vect{v}$ of size $\le n$.
+
+\api $\vcopenpos(\prk, I, \vect{v}) \rightarrow \pi_I$.
+Deterministic algorithm that returns a proof $\pi_I$ that $\vect{v}_I = (v_i)_{i\in I}$ is the $I$-subvector of $\vect{v}$.
+For notational convenience, $I$ can be either an index set $I\subseteq [0,n)$ or an individual index $I = i\in [0,n)$.
+
+\api $\vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) \rightarrow T/F$.
+Deterministic algorithm that verifies the proof $\pi_I$ that $\vect{v}_I$ is the $I$-subvector of the vector committed in $c$.
+As before, $I$ can be either an index set $I\subseteq [0,n)$ or an individual index $I = i\in [0,n)$.
+
+\api $\vcverifyupk(\vrk, i, \upk_i) \rightarrow T/F$.
+Deterministic algorithm that verifies that $\upk_i$ is indeed the $i$th update key.
+
+\api $\vccommupdate(c, \delta, j,\upk_j)\rightarrow c'$.
+Deterministic algorithm that returns a new commitment $c'$ to $\vect{v'}$ obtained by updating $v_j$ to $v_j+\delta$ in the vector $\vect{v}$ committed in $c$.
+Needs $\upk_j$ associated with the updated position $j$.
+
+\api $\vcproofupdate(\pi_i, \delta, j, \upk_i, \upk_j)\rightarrow \pi'_i$.
+Deterministic algorithm that updates an old proof $\pi_i$ for the $i$th element $v_i$, given that the $j$th element was updated to $v_j + \delta$.
+Note that $i$ can be equal to $j$.
+
+\api $\vcaggregateproofs(I, (\pi_i)_{i\in I})\rightarrow \pi_I$
+Deterministic algorithm that takes $\pi_i$ for $v_i,\forall i\in I$ and aggregates them into an $I$-subvector proof $\pi_I$, which is ideally constant-sized.
+
+\parhead{Additional APIs.}
+We add a \vccommitempty API for committing to an ``empty'' vector, which is useful for initializing the authenticated state of a stateless cryptocurrency.
+\\
+
+\api $\vccommitempty(\mathsf{eck})\rightarrow c, \pi_0$.
+Deterministic algorithm that, given $\mathsf{eck}\in \{\prk, \vrk\}$, returns a commitment to the empty vector $\vect{v}=(0,0,\dots,0)$ and a proof $\pi_0$ that $v_i = 0$, which verifies successfully for any position $i$.
+
+\subsection{aSVC Correctness and Security Definitions}
+\label{s:prelim:vcs:correctness-and-security}
+
+We argue why our aSVC from \cref{s:svc} satisfies these definitions in \cref{s:svc:correctness-and-security}.
+
+\begin{definition}[Aggregatable Vector Commitment Scheme]
+    \label{def:vc}
+    (\vcsetup, \vccommit, \vcopenpos, \vcverifypos, \vcverifyupk, \vccommupdate, \vcproofupdate, \vcaggregateproofs) is a secure aggregatable vector commitment scheme if
+    $\forall$ upper-bounds $n=\poly(\lambda)$
+    it satisfies the following properties:
+\end{definition}
+
+\begin{definition}[Opening Correctness]
+    \label{def:vc:opening-correctness}
+    $\forall$ vectors $\vect{v}=(v_j)_{j\in [0,n)}$, $\forall$ index sets $I\subseteq[0,n)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)}\leftarrow \vcsetup(1^\lambda, n), \\
+    c \leftarrow \vccommit(\prk,\vect{v}),\\
+    \pi_I \leftarrow \vcopenpos(\prk, I, \vect{v}):\\
+    \vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) = T
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Commitment Update Correctness]
+    $\forall$ vectors $\vect{v}=(v_j)_{j\in [0,n)}$, $\forall$ positions $i,k\in[0,n)$, $\forall$ updates $\delta\in \Zp$, let $\vect{u}$ be the same vector as $\vect{v}$ except with $v_k+\delta$ rather than $v_k$ at position $k$. Then:\\
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)} \leftarrow \vcsetup(1^\lambda, n), \\
+    c, \leftarrow \vccommit(\prk, \vect{v}),\\
+    \hat{c}\leftarrow \vccommupdate(c, \delta, k,\upk_k),\\
+    c' \leftarrow \vccommit(\prk, \vect{u}):\\
+    c' = \hat{c}
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Proof Update Correctness]
+    $\forall$ vectors $\vect{v}=(v_j)_{j\in [0,n)}$, $\forall$ positions $i\in[0,n),k\in[0,n)$, $\forall$ updates $\delta \in \Zp$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)} \leftarrow \vcsetup(1^\lambda, n), \\
+    c \leftarrow \vccommit(\prk, \vect{v}),\\
+    c' \leftarrow \vccommupdate(c, \delta, k,\upk_k),\\
+    \pi_i \leftarrow \vcopenpos(\prk, i, \vect{v}),\\
+    \pi'_i \leftarrow \vcproofupdate(\pi_i, \delta, k,\upk_i, \upk_k):\\
+    \vcverifypos(\vrk, c', v_k+\delta, k, \pi'_i) = T
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Aggregation Correctness]
+    \label{def:vc:aggregation-correctness}
+    $\forall$ vectors $\vect{v}=(v_j)_{j\in [0,n)}$, $\forall$ index sets $I\subseteq[0,n)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)}\leftarrow \vcsetup(1^\lambda, n), \\
+    c \leftarrow \vccommit(\prk,\vect{v}),\\
+    (\pi_i \leftarrow \vcopenpos(\prk, i, \vect{v}))_{i\in I},\\
+    \pi_I \leftarrow \vcaggregateproofs(I, (\pi_i)_{i\in I}):\\
+    \vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) = T
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Update Key Correctness]
+    $\forall$ positions $i\in[0,n)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)} \leftarrow \vcsetup(1^\lambda, n):\\
+    \vcverifyupk(\vrk, i, \upk_i) = T
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Update Key Uniqueness]
+    \label{def:vc:update-key-uniquness}
+    $\forall$ positions $i\in[0,n)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)} \leftarrow \vcsetup(1^\lambda, n),\\
+    i, \upk,\upk' \leftarrow \Adv(1^\lambda, \prk,\vrk,(\upk_j)_{j\in[0,n)}):\\
+    \vcverifyupk(\vrk, i, \upk) = T\ \wedge \\
+    \vcverifyupk(\vrk, i, \upk') = T \wedge \\
+    \upk \ne \upk'
+    \end{array} \right] \le \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Position Binding Security]
+    \label{def:svc:position-binding-security}
+    $\forall$ adversaries $\Adv$ running in time $\poly(\lambda)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_i)_{i\in[0,n)} \leftarrow \vcsetup(1^\lambda, n), \\
+    (c,I,J,\vect{v}_I,\vect{v}'_J, \pi_I,\pi_J) \leftarrow\Adv(1^\lambda, \prk,\vrk,(\upk_i)_{i\in[0,n)}): \\
+    \vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) = T\ \wedge \\
+    \vcverifypos(\vrk, c, \vect{v}'_J, J, \pi_J) = T\ \wedge \\
+    \exists k \in I\cap J,\ \text{such that}\ v_k \ne v'_k
+    \end{array} \right] \le \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\tableVcComparison{asvc-comparison}
