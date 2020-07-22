@@ -1,0 +1,223 @@
+\section{Aggregatable Subvector Commitment (aSVC) Schemes}
+\label{s:svc}
+
+In this section, we introduce the notion of \textit{aggregatable subvector commitments (aSVCs)} as a natural extension to \textit{subvector commitments (SVCs)}~\cite{LM19} where anybody can aggregate $b$ proofs for individual positions into a single constant-sized \textit{subvector proof} for those positions.
+Our formalization differs from previous work~\cite{BBF19,GRWZ20} in that it accounts for (static) update keys as the \textit{verifiable} auxiliary information needed to update commitments and proofs.
+This is useful in distributed settings where the public parameters of the scheme are split amongst many participants, such as in stateless cryptocurrencies.
+\ifNotCameraReady
+In \cref{s:asvc:from-kzg}, we introduce an efficient aSVC construction \textit{with scalable updates} from KZG commitments to Lagrange polynomials.
+\fi
+
+\subsection{aSVC API}
+\label{s:prelim:vcs:api}
+\label{s:asvc:defs}
+
+Our API resembles the VC API by Chepurnoy et al.~\cite{CPZ18} and the SVC API by Lai and Malavolta~\cite{LM19}, extended with an API for verifying update keys (see \cref{s:stateless-cryptocurrency:dos-update-key}) and an API for aggregating proofs.
+Unlike \cite{CPZ18}, our \vcproofupdate API receives both $\upk_i$ and $\upk_j$ as input.
+This is reasonable in the stateless setting, since each user has to store their $\upk_i$ anyway and they extract $\upk_j$ from the transactions (see \cref{s:stateless-cryptocurrency}).
+\\
+
+\api $\vcsetup(1^\lambda, n)\rightarrow \prk,\vrk,(\upk_j)_{j\in[0,n)}$.
+Randomized algorithm that, given a security parameter $\lambda$ and an upper-bound $n$ on vector size, returns a \textit{proving key} \prk, a \textit{verification key} \vrk and \textit{update keys} $(\upk_j)_{j\in[0,n)}$.
+
+\api $\vccommit(\prk, \vect{v}) \rightarrow c$.
+Deterministic algorithm that returns a commitment $c$ to any vector $\vect{v}$ of size $\le n$.
+
+\api $\vcopenpos(\prk, I, \vect{v}) \rightarrow \pi_I$.
+Deterministic algorithm that returns a proof $\pi_I$ that $\vect{v}_I = (v_i)_{i\in I}$ is the $I$-subvector of $\vect{v}$.
+For notational convenience, $I$ can be either an index set $I\subseteq [0,n)$ or an individual index $I = i\in [0,n)$.
+
+\api $\vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) \rightarrow T/F$.
+Deterministic algorithm that verifies the proof $\pi_I$ that $\vect{v}_I$ is the $I$-subvector of the vector committed in $c$.
+As before, $I$ can be either an index set $I\subseteq [0,n)$ or an individual index $I = i\in [0,n)$.
+
+\api $\vcverifyupk(\vrk, i, \upk_i) \rightarrow T/F$.
+Deterministic algorithm that verifies that $\upk_i$ is indeed the $i$th update key.
+
+\api $\vccommupdate(c, \delta, j,\upk_j)\rightarrow c'$.
+Deterministic algorithm that returns a new commitment $c'$ to $\vect{v'}$ obtained by updating $v_j$ to $v_j+\delta$ in the vector $\vect{v}$ committed in $c$.
+Needs $\upk_j$ associated with the updated position $j$.
+
+\api $\vcproofupdate(\pi_i, \delta, i, j, \upk_i, \upk_j)\rightarrow \pi'_i$.
+Deterministic algorithm that updates an old proof $\pi_i$ for the $i$th element $v_i$, given that the $j$th element was updated to $v_j + \delta$.
+Note that $i$ can be equal to $j$.
+
+\api $\vcaggregateproofs(I, (\pi_i)_{i\in I})\rightarrow \pi_I$
+Deterministic algorithm that, given proofs $\pi_i$ for $v_i,\forall i\in I$, aggregates them into a succinct $I$-subvector proof $\pi_I$.
+
+\subsection{aSVC Correctness and Security Definitions}
+\label{s:prelim:vcs:correctness-and-security}
+
+\ifNotCameraReady
+We argue why our aSVC from \cref{s:svc} satisfies these definitions in \cref{s:svc:correctness-and-security}.
+\fi
+
+%\setlength{\columnsep}{1cm}
+%\noindent\fbox{\parbox{\textwidth}{%
+%\begin{multicols}{2}
+%\small
+\begin{definition}[Aggregatable SVC Scheme]
+    \label{def:vc}
+    $(\vcsetup$, $\vccommit$, \ifCameraReady\linebreak[4]\fi$\vcopenpos$, $\vcverifypos$, $\vcverifyupk$, $\vccommupdate$, $\vcproofupdate$, $\vcaggregateproofs)$ is a secure aggregatable subvector commitment scheme if
+    $\forall$ upper-bounds $n=\poly(\lambda)$
+    it satisfies the following properties:
+\end{definition}
+
+\ifCameraReady
+\begin{definition}[Correctness]
+$\forall$ honestly generated $\prk,\vrk,(\upk_j)_{j\in[0,n)}$ via \ifCameraReady\linebreak[4]\fi\vcsetup, $\forall$ vectors $\vect{v}=(v_j)_{j\in [0,n)}$ with commitment $c$ obtained via \vccommit and, optionally, \vccommupdate calls, $\forall I\subseteq[0,n)$, if $\pi_I$ is a (sub)vector proof for $\vec{v}_I=(v_i)_{i\in I}$ obtained via any valid interleaving of \vcopenpos, \ifCameraReady\linebreak[4]\fi\vcaggregateproofs and \vcproofupdate, then $\vcverifypos(\vrk, c, \vec{v}_I, I, \pi_I)$ returns true.
+Furthermore, $\vcverifyupk(\vrk, i, \upk_i) = T,\forall i\in[0,n)$.
+\end{definition}
+\else
+\begin{definition}[Opening Correctness]
+    \label{def:vc:opening-correctness}
+    $\forall$ vectors $\vect{v}=(v_j)_{j\in [0,n)}$, $\forall$ index sets $I\subseteq[0,n)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)}\leftarrow \vcsetup(1^\lambda, n), \\
+    c \leftarrow \vccommit(\prk,\vect{v}),\\
+    \pi_I \leftarrow \vcopenpos(\prk, I, \vect{v}):\\
+    \vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) = T
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Commitment and Proof Update Correctness]
+    $\forall$ vectors $\vect{v}=(v_j)_{j\in [0,n)}$, $\forall$ positions $i,k\in[0,n)$, $\forall$ updates $\delta\in \Zp$, let $\vect{u}=(u_j)_{j\in[0,n)}$ be the same vector as $\vect{v}$ except with $v_k+\delta$ rather than $v_k$ at position $k$.
+    Then:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)} \leftarrow \vcsetup(1^\lambda, n), \\
+    c \leftarrow \vccommit(\prk, \vect{v}),\\
+    \hat{c}\leftarrow \vccommupdate(c, \delta, k,\upk_k),\\
+    c' \leftarrow \vccommit(\prk, \vect{u}):\\
+    c' = \hat{c}
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)\\
+    \\
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)} \leftarrow \vcsetup(1^\lambda, n), \\
+    c \leftarrow \vccommit(\prk, \vect{v}),\\
+    c' \leftarrow \vccommupdate(c, \delta, k,\upk_k),\\
+    \pi_i \leftarrow \vcopenpos(\prk, i, \vect{v}),\\
+    \pi'_i \leftarrow \vcproofupdate(\pi_i, \delta, i, k,\upk_i, \upk_k):\\
+    \vcverifypos(\vrk, c', u_i, i, \pi'_i) = T
+    % Note: We use u_i here to handle the case when i = k, and v_i wouldn't pass VC.VerifyPos because it was updated, but u_i = v_i + \delta would pass.
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Aggregation Correctness]
+    $\forall$ vectors $\vect{v}=(v_j)_{j\in [0,n)}$, $\forall$ index sets $I\subseteq[0,n)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)}\leftarrow \vcsetup(1^\lambda, n), \\
+    c \leftarrow \vccommit(\prk,\vect{v}),\\
+    (\pi_i \leftarrow \vcopenpos(\prk, i, \vect{v}))_{i\in I},\\
+    \pi_I \leftarrow \vcaggregateproofs(I, (\pi_i)_{i\in I}):\\
+    \vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) = T
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Update Key Correctness]
+    $\forall$ positions $i\in[0,n)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)} \leftarrow \vcsetup(1^\lambda, n):\\
+    \vcverifyupk(\vrk, i, \upk_i) = T
+    \end{array} \right] \ge 1 - \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+\fi
+
+\begin{definition}[Update Key Uniqueness]
+    \label{def:vc:update-key-uniquness}
+    $\forall$ adversaries $\Adv$ running in time $\poly(\lambda)$:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    \prk,\vrk,(\upk_j)_{j\in[0,n)} \leftarrow \vcsetup(1^\lambda, n),\\
+    i, \upk,\upk' \leftarrow \Adv(1^\lambda, \prk,\vrk,(\upk_j)_{j\in[0,n)}):\\
+    \vcverifyupk(\vrk, i, \upk) = T\ \wedge \\
+    \vcverifyupk(\vrk, i, \upk') = T \wedge \\
+    \upk \ne \upk'
+    \end{array} \right] \le \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+
+\paragraph{Observation:}
+Definitions that allow for \textit{dynamic} update hints rather than \textit{unique} update keys are possible too, but would be less simple to state and less useful for stateless cryptocurrencies (see \cref{s:stateless-cryptocurrency}).
+
+\begin{definition}[Position Binding Security]
+    \label{def:svc:position-binding-security}
+    $\forall$ adversaries $\Adv$ running in time $\poly(\lambda)$, if $\vect{v}_I=(v_i)_{i\in I}$ and $\vect{v}'_J=(v'_j)_{j\in J}$, then:
+    \begin{align*}
+    \Pr \left[ \begin{array}{c}
+    %pp \leftarrow \vcsetup(1^\lambda, n), \\
+    %\prk,\vrk,(\upk_i)_{i\in[0,n)}\leftarrow pp,\\
+    %(c,I,J,\vect{v}_I,\vect{v}'_J, \pi_I,\pi_J) \leftarrow\Adv(1^\lambda, pp): \\
+    \prk,\vrk,(\upk_i)_{i\in[0,n)} \leftarrow \vcsetup(1^\lambda, n), \\
+    (c,I,J,\vect{v}_I,\vect{v}'_J, \pi_I,\pi_J) \leftarrow\Adv(1^\lambda, \prk,\vrk,(\upk_i)_{i\in[0,n)}): \\
+    \vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) = T\ \wedge \\
+    \vcverifypos(\vrk, c, \vect{v}'_J, J, \pi_J) = T\ \wedge \\
+    \exists k \in I\cap J,\ \text{such that}\ v_k \ne v'_k
+    \end{array} \right] \le \mathsf{negl}(\lambda)
+    \end{align*}
+\end{definition}
+%\end{multicols}
+%}}
+
+\begin{table*}[t]
+    %\large
+    %\small
+    %\footnotesize
+    %\scriptsize
+    \centering
+    \caption{
+        Asymptotic comparison of our aSVC with other (aS)VCs based on prime-order groups.
+        $n$ is the vector size and $b$ is the subvector size.
+        See \ifCameraReady our extended paper~\cite{TAB+20e} \else \cref{s:complexity:kog}\xspace\fi for a more detailed analysis.
+        All schemes have $O(n)$-sized parameters (except ~\cite{LM19} has $O(n^2)$ and ~\cite{CFG+20} has $O(1)$);
+        can update commitments in $O(1)$ time (except for \cite{KZG10a});
+        have $O(1)$-sized proofs that verify in $O(1)$ time (except \cite{CPZ18} and \cite{Tomescu20} proofs are $O(\lg{n})$).
+        \textit{Com.} is the time to commit to a size-$n$ vector.
+        \textit{Proof upd.} is the time to update \textit{one} individual proof $\pi_i$ after a change to \textit{one} vector element $v_j$.
+        \textit{Prove one}, \textit{Prove subv.} and \textit{Prove each} are the times to compute a proof $\pi_i$ for one $v_i$, a size-$b$ subvector proof $\pi_I$ and proofs for all $(v_i)_{i\in[0,n)}$, respectively.
+        % \textit{Prove each} is useful when a proof-serving node computes the VC from scratch given all account balances and then computes all proofs.
+    }
+    \label{t:asvc-comparison} % must go after \caption{} for \cref{} to work
+    \setlength{\tabcolsep}{.22em} % space between columns
+    \begin{tabular}{lcccccccccccc}
+        %\toprule
+        {\makecell{(aS)VC\\scheme}}
+        & \makecell{$\vert\vrk\vert$}
+        & \makecell{$\vert \upk_i\vert$}
+        & \makecell{Com.}
+        & \makecell{Prove\\one}
+        & \makecell{Proof\\upd.}
+        & \makecell{Prove\\subv.}
+        & \makecell{Verify\\subv.}
+        & \makecell{Aggr-\\egate}
+        & \makecell{Prove\\each}
+        \\
+        \toprule
+        \cite{LM19}           & \rn  & \rn  & $n$    & $n$    & $1$   & $\myred{bn}$      & $b$    & \nop        & \ns\\
+
+        \cite{KZG10a}         & $b$  & \nop & \nlgsn & $n$    & \nop  & \btc              & \mlgsm & \nop        & \ns\\
+
+        \cite{CDHK15}         & \rn  & \rn  & \nlgsn & $n$    & 1     & $n\lg^2{n}$       & \mlgsm & \nop        & \ns\\
+
+        \cite{CPZ18}          & \lgn & \lgr & $n$    & $n$    & \lgr  & \nop              & \nop   & \nop        & \ns\\
+
+        \cite{Tomescu20}      & \tcz & \lgr & \nlgn  & \nlgn  & \lgr  & \btc              & \mlgsm & \nop        & \nlgn\\
+
+        \cite{GRWZ20}         & \rn  & \rn  & $n$    & $n$    & $1$   & $\myred{bn}$      & $b$    & $b$         & \ns\\
+
+        \cite{CFG+20}         & $1$  & 1    & \nlgn  & \nlgn  & $1$   & $(n-b)\lg{(n-b)}$ & \mlgm & \mlgsm       & \nlgsn\\
+        \toprule
+
+        \textbf{Our work}     & $b$  & $1$  & $n$    & $n$    & $1$   & \btc              & \mlgsm & $b\lg^2{b}$ & \nlgn\\
+
+        \textbf{Our work}$^*$ & $b$  & $1$  & \nlgn  & $1$    & $1$   & \mlgsm            & \mlgsm & \mlgsm      & \nlgn
+
+    \end{tabular}
+\end{table*}

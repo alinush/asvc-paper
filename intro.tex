@@ -1,0 +1,181 @@
+%
+\section{Introduction}
+
+\blfootnote{For an up-to-date errata of this paper, please see \url{https://github.com/alinush/asvc-paper}.}
+In a \textit{stateless cryptocurrency}, neither \textit{miners} nor cryptocurrency \textit{users} need to store the full \textit{ledger state}.
+Instead, this state consisting of users' account balances is split among all users using an \textit{authenticated data structure}.
+This way, miners only store a succinct \textit{digest} of the ledger state and each user stores their account balance.
+Nonetheless, miners can still validate transactions sent by users, who now include \textit{proofs} that they have sufficient balance.
+Furthermore, miners can still propose new \textit{blocks} of transactions and users can easily \textit{synchronize} or \textit{update} their proofs as new blocks get published.
+
+Stateless cryptocurrencies have received increased attention~\condcite{Dryja19,RMCI17,CPZ18,BBF19,GRWZ20}{ST99,Miller12,Todd16,Buterin17} due to several advantages.
+First, stateless cryptocurrencies eliminate hundreds of gigabytes of miner storage needed to validate blocks.
+Second, statelessness makes scaling consensus via \textit{sharding} much easier, by allowing miners to efficiently switch from one shard to another~\condcite{KJG+18}{EthereumSharding}.
+Third, statelessness lowers the barrier to entry for full nodes, resulting in a much more resilient, distributed cryptocurrency.
+
+\parhead{Stateless Cryptocurrencies from VCs.}
+At a high level, a VC scheme allows a \textit{prover}  to compute a succinct \textit{commitment} $c$ to a \textit{vector} $\vect{v}=[v_0, v_1, \dots, v_{n-1}]$ of  $n$ \textit{elements} where $v_i\in \Zp$.
+%Although we are referring to it as a ``commitment'', we will be more interested in its \textit{binding}, rather than its \textit{hiding}, properties.
+Importantly, the prover can generate a \textit{proof} $\pi_i$ that $v_i$ is the element at position $i$ in $\vect{v}$, and any \textit{verifier} can check it against the commitment $c$.
+The prover needs a \textit{proving key} $\prk$ to commit to vectors and to compute proofs, while the verifier needs a \textit{verification key} $\vrk$ to verify proofs.
+(Usually $|\vrk| \ll |\prk|$.)
+Some VC schemes support \textit{updates}: if one or more elements in the vector change, the commitment and proofs can be updated efficiently.
+For this, a static \textit{update key} $\upk_j$ tied only to the updated position $j$ is necessary.
+Alternatively, some schemes require dynamic \textit{update hints} $\uph_j$, typically consisting of the actual proof $\pi_j$.
+The proving, verification and update keys comprise the VC's \textit{public parameters}.
+Lastly, \textit{subvector commitment (SVC)} schemes~\cite{LM19} support computing succinct proofs for \textit{$I$-subvectors} $(v_i)_{i\in I}$ where $I\subset [0,n)$.
+Furthermore, some schemes are \textit{aggregatable}: multiple proofs $\pi_i$ for $v_i, \forall i \in I$ can be aggregated into a single, succinct $I$-subvector proof.
+
+Chepurnoy, Papamanthou and Zhang pioneered the idea of building \textit{account-based}~\cite{Ethereum}, stateless cryptocurrencies on top of any \textit{vector commitment (VC)} scheme~\cite{CPZ18}.
+Ideally, such a VC would have (1) sublinear-sized, updatable proofs with sublinear-time verification, (2) updatable commitments and (3) sublinear-sized update keys.
+In particular, static update keys (rather than dynamic update hints) help reduce interaction and thus simplify the design (see \cref{s:stateless-cryptocurrency:edrax}).
+We say such a VC has ``\textit{scalable updates}.''
+Unfortunately, most VCs do not have scalable updates (see \cref{s:related-work\ifNotCameraReady,t:asvc-comparison,t:rsa-asvc-comparison-appendix\fi}) or, if they do~\cite{CPZ18,Tomescu20}, they are not optimal in their proof and update key sizes.
+Lastly, while some schemes in hidden-order groups have scalable updates~\cite{CFG+20}, they suffer from larger concrete proof sizes and are likely to require more computation in practice.
+
+\parhead{Our Contributions.}
+In this paper, we formalize a new \textit{aggregatable subvector commitment (aSVC)} notion that supports commitment updates, proof updates and aggregation of proofs into subvector proofs.
+Then, we construct an aSVC \textit{with scalable updates} over pairing-friendly groups.
+Compared to other pairing-based VCs, our aSVC has constant-sized, aggregatable proofs that can be updated with constant-sized update keys (see \cref{t:asvc-comparison}).
+Furthermore, our aSVC supports computing all proofs in quasilinear time.
+\ifCameraReady
+We prove our aSVC secure under $q$-SBDH~\cite{Goyal07} in the extended version of our paper~\cite{TAB+20e}.
+\else
+We prove security of our aSVC by strengthening (and re-proving) the security definition of KZG polynomial commitments~\cite{KZG10a}.
+\fi
+
+\begin{table*}[t]
+    %\large
+    %\small
+    %\footnotesize
+    %\scriptsize
+    \centering
+    \caption{
+        Asymptotic comparison of our work with other stateless cryptocurrencies.
+        $n$ is the number of users, $\lambda$ is the security parameter, and $b$ is the number of transactions in a block.
+        $\Gexp$ is an \textit{exponentiation} in a known-order group.
+        $\mathbb{G}_?$ is a (slower) \textit{exponentiation} (of size $2\lambda$ bits) in a hidden-order group.
+        $\mathbb{P}$ is a pairing computation.
+        $|\pi_i|$ is the size of a proof for a user's account balance.
+        $|\upk_i|$ is the size of user $i$'s update key.
+        $|\pi_I|$ is the size of a proof aggregated from all $\pi_i$'s in a block.
+        We give each \textit{Miner's storage} in terms of VC public parameters (e.g., update keys).
+        A miner takes: (1) \textit{Check digest time}, to check that, by ``applying'' the transactions from block $t+1$ to block $t$'s digest, he obtains the correct digest for block $t+1$,
+        % Note: This can be further asymptotically reduced (see Overleaf notes)
+        (2) \textit{Aggr. proofs time}, to aggregate $b$ transaction proofs, and
+        (3) \textit{Vrfy. $|\pi_I|$ time}, to verify the aggregated proof.
+        A user takes \textit{Proof synchr. time} to ``synchronize'' or update her proof by ``applying'' all the transactions in a new block.
+        We treat \cite{GRWZ20} and \cite{CFG+20} as a payments-only stateless cryptocurrency without smart contracts.
+        Our aggregation and verification times have an extra $b\log^2{b}\Fop$ term, consisting of very fast field operations.
+        \ifNotCameraReady A detailed analysis of the underlying VCs can be found in \cref{s:complexity:pointproofs,s:complexity-lagrange-asvc,s:complexity:cpz,s:complexity-bbf}.\xspace\fi
+    }
+    \label{t:stateless-comparison} % must go after \caption{} for \cref{} to work
+    \setlength{\tabcolsep}{.4em} % space between columns
+    \begin{tabular}{ccccc}
+        %\toprule
+        {\makecell{Account-based\\stateless\\cryptocurrencies}}
+        & \makecell{Edrax\\\cite{CPZ18}}
+        & \makecell{Pointproofs\\\cite{GRWZ20}}
+        & \makecell{2nd VC of\\~\cite{CFG+20}}
+        & \textbf{Our work}\\
+        \toprule
+        $|\pi_i|$               & $\rl\Gsz$    & 1\Gsz              & 1\Ghsz                     & 1\Gsz\\
+        $|\upk_i|$              & $\rl\Gsz$    & \rn\Gsz            & 1\Ghsz                     & 1\Gsz\\
+        $|\pi_I|$               & $\rbl\Gsz$   & 1\Gsz              & 1\Ghsz                     & 1\Gsz\\
+        Miner's storage         & $\rn\Gsz$    & $\rn\Gsz$          & 1\Ghsz                     & $b\Gsz$\\
+        Vrfy. $|\pi_I|$ time    & $b\rl\Pair$  & $2\Pair+b\Gexp$    & $b\myred{\log{b}}\Ghop$    & $2\Pair+ b\Gexp + \rblb\Fop$\\
+        Check digest time       & $b \Gexp$    & $b\Gexp$           & $b\Ghop$                   & $b\Gexp$\\
+        Aggr. proofs time       & \nop         & $b\Gexp$           & $b\myred{\log^2{b}} \Ghop$ & $b\Gexp + \rblb\Fop $\\
+        Proof synchr. time      & $b\rl\Gexp$  & $b\Gexp$           & $b\Ghop$                   & $b\Gexp$\\
+    \end{tabular}
+\end{table*}
+
+\paragraph{A Highly-Efficient Stateless Cryptocurrency.}
+We use our aSVC to construct a stateless cryptocurrency based on the elegant design of Edrax\xspace\cite{CPZ18}.
+Our stateless cryptocurrency has very low storage, communication and computation overheads (see \cref{t:stateless-comparison}).
+First, our constant-sized update keys have a smaller impact on block size and help users update their proofs faster.
+Second, our proof aggregation drastically reduces block size and speeds up block validation.
+Third, our verifiable update keys removes the need for miners to either (1) store all $O(n)$ update keys or (2) interact during transaction validation to check update keys.
+
+\subsection{Related Work}
+\label{s:related-work}
+
+\parhead{Vector Commitments (VCs).}
+The notion of VCs appears early in~\cite{CFM08,LY10,KZG10a} but Catalano and Fiore~\cite{CF13} are the first to formalize it.
+They introduce schemes based on the Computational Diffie-Hellman (CDH), with $O(n^2)$-sized public parameters, and on the RSA problem, with $O(1)$-sized public parameters, which can be \textit{specialized} into $O(n)$-sized ones when needed.
+%Neither scheme is aggregatable.
+Lai and Malavolta~\cite{LM19} formalize \textit{subvector commitments (SVCs)} and extend both constructions from~\cite{CF13} with constant-sized $I$-subvector proofs.
+Camenisch et al.~\cite{CDHK15} build VCs from KZG commitments~\cite{KZG10a} to Lagrange polynomials\ifNotCameraReady\xspace(see \cref{s:prelim:interpolation})\fi\xspace that are not only \textit{binding} but also \textit{hiding}.
+However, their scheme intentionally prevents aggregation of proofs as a security feature.
+%Their \textit{verification key} (see \cref{s:prelim:vcs}) is $O(n)$-sized and they do not discuss updating proofs.
+Feist and Khovratovich~\cite{FK20} introduce a technique for precomputing all \textit{constant-sized} evaluation proofs in KZG commitments when the evaluation points are all roots of unity.
+We use their technique to compute VC proofs fast.
+Chepurnoy et al.~\cite{CPZ18} instantiate VCs using multivariate polynomial commitments~\cite{PST13} but with logarithmic rather than constant-sized proofs.
+Then, they build the first efficient, account-based, stateless cryptocurrency on top of their scheme.
+Later on, Tomescu~\cite{Tomescu20} presents a very similar scheme but from univariate polynomial commitments~\cite{KZG10a} which supports subvector proofs.
+
+Boneh et al.~\cite{BBF19} instantiate VCs using hidden-order groups.
+They are the first to support aggregating multiple proofs (under certain conditions\ifNotCameraReady; see \cite[Sec. 5.2, p. 20]{BBF18}\fi).
+They are also the first to have constant-sized public parameters, without the need to specialize them into $O(n)$-sized ones.
+However, their VC uses update hints (rather than keys), which is less suitable for stateless cryptocurrencies.
+\ifNotCameraReady
+Furthermore, they introduce \textit{key-value map commitments (KVCs)}, which support a larger set of positions from $[0, 2^{2\lambda})$ rather than $[0,n)$, where $\lambda$ is a security parameter.
+They argue their KVC can be used for account-based stateless cryptocurrencies, but do not explore a construction in depth.
+\fi
+% They do not talk about updating KVC proofs.
+Campanelli et al.~\cite{CFG+20} also formalize SVCs with a more powerful notion of \textit{infinite (dis)aggregation} of proofs.
+In contrast, our aSVC only supports ``one hop'' aggregation and does not support disaggregation.
+They also formalize a notion of updatable, distributed VCs as Verified Decentralized Storage (VDS).
+However, their use of hidden-order groups leads to larger concrete proof sizes.
+% Note: Regarding "and to formalize the notion of \textit{specialization} for public parameters," it's probably more fair to attribute this to CF13.
+\ifNotCameraReady
+Both of their schemes have $O(1)$-sized public parameters and can compute all proofs efficiently in quasilinear time.
+One scheme supports update hints while the other supports update keys.
+\fi
+
+Concurrent with our work, Gorbunov et al.~\cite{GRWZ20} also formalize aSVCs with a stronger notion of \textit{cross-commitment aggregation}.
+However, their formalization lacks (verifiable) update keys, which hides many complexities that arise in stateless cryptocurrencies (see \cref{s:stateless-cryptocurrency:dos-update-key}).
+Their VC scheme extends~\cite{LY10} with (1) aggregating proofs into $I$-subvector proofs and (2) aggregating multiple $I$-subvector proofs \textit{with respect to different VCs} into a single, constant-sized proof.
+However, this versatility comes at the cost of (1) losing the ability to precompute all proofs fast, (2) $O(n)$-sized update keys for updating proofs, and (3) $O(n)$-sized verification key.
+% Note: For updating comitments, the update key for position $i$ is just one group element.
+This makes it difficult to apply their scheme in a stateless cryptocurrency for payments such as Edrax~\cite{CPZ18}.
+Furthermore, Gorbunov et al. also enhance KZG-based VCs with proof aggregation, but they do not consider proof updates.
+Lastly, they show it is possible to aggregate $I$-subvector proofs across different commitments for KZG-based VCs.
+
+%Libert et al.~\cite{LRY16} generalize VCs to \textit{functional commitments (FCs)} which, instead of revealing $v_i$ when opening, reveals $\sum_{i\in[0,n)} x_i v_i$, for any $\vect{x}=(x_i)_{i\in[0,n)}$ given as input to the opening algorithm.
+%Lai and Malavolta~\cite{LM19} generalize FCs to \textit{linear map commitments (LMCs)} which reveals $f(\vect{v})$ for any linear map $f : \Fp^n \rightarrow \Fp^q$ given as input to the opening algorithm ($q$ is fixed at setup).
+Kohlweiss and Rial~\cite{KR13} extend VCs with zero-knowledge protocols for proving correct computation of a new commitment, for opening elements at secret positions, and for proving secret updates of elements at secret positions.
+
+% Note: BCFK19 for zero-knowledge sets from CPZ18 VC. Cool, but unrelated.
+% Note: Thakur19 claims VC from bilinear accs, but does not give full description.
+
+\parhead{Stateless Cryptocurrencies.}
+The concept of stateless validation appeared early in the cryptocurrency community~\cite{Miller12,Todd16,Buterin17} and later on in the academic community~\cite{RMCI17,Dryja19,CPZ18,BBF19,GRWZ20}.
+\ifNotCameraReady\paragraph{UTXO-based.}\fi
+Initial proposals for UTXO-based cryptocurrencies used Merkle hash trees~\cite{Miller12,Todd16,Dryja19,CPZ18}.
+In particular, Dryja~\cite{Dryja19} gives a beautiful Merkle forest construction that significantly reduces communication.
+Boneh et al.~\cite{BBF19} further reduce communication by using RSA accumulators\ifNotCameraReady~\cite{Bd93,LLX07}\fi.
+
+\ifNotCameraReady\paragraph{Account-based.}\fi
+Reyzin et al.~\cite{RMCI17} introduce a Merkle-based construction for account-based stateless cryptocurrencies.
+Unfortunately, their construction relies on \textit{proof-serving nodes}: every user sending coins has to fetch the recipient's Merkle proof from a node and include it with her own proof in the transaction.
+% Note: Fundamentally, this is because Merkle trees use update hints $\uph_i$ consisting of the Merkle proof $\pi_i$.
+Edrax~\cite{CPZ18} obviates the need for proof-serving nodes by using a vector commitment (VC) with update keys (rather than update hints like Merkle trees).
+Nonetheless, proof-serving nodes can still be used to assist users who do not want to manually update their proofs (which is otherwise very fast).
+Unfortunately, Edrax's (non-aggregatable) proofs are logarithmic-sized and thus sub-optimal.
+
+Gorbunov et al.~\cite{GRWZ20} introduce \textit{Pointproofs}, a versatile VC scheme which can aggregate proofs across \textit{different} commitments.
+They use this power to solve a slightly different problem: stateless block validation for smart contract executions (rather than for payments as in Edrax).
+Unfortunately, their approach requires miners to store a different commitment for each smart contract, or around 4.5 GBs of (dynamic) state in a system with $10^8$ smart contracts.
+This could be problematic in applications such as sharded cryptocurrencies, where miners would have to download part of this large state from one another when switching shards.
+Lastly, the verification key in Pointproofs is $O(n)$-sized, which imposes additional storage requirements on miners.
+Furthermore, Gorbunov et al. do not discuss how to update nor precompute proofs efficiently.
+Instead they assume that all contracts have $n\le 10^3$ memory locations and users can compute all proofs in $O(n^2)$ time.
+In contrast, our aSVC can compute all proofs in $O(n\log{n})$ time~\cite{FK20}.
+Nonetheless, their approach is a very promising direction for supporting smart contracts in stateless cryptocurrencies.
+
+Bonneau et al.~\cite{BMRS20} use recursively-composable, succinct non-interactive arguments of knowledge (SNARKs) \cite{BCTV14} for stateless validation.
+However, while block validators do not have to store the full state in their system, miners who propose blocks still have to.
+\ifNotCameraReady
+In contrast, in previous stateless cryptocurrencies (including ours), even miners who propose blocks are stateless.
+\fi

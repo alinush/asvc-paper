@@ -1,0 +1,103 @@
+\section{Preliminaries}
+\label{s:prelim}
+
+\parhead{Notation.}
+$\lambda$ is our security parameter.
+$\G_1,\G_2$ are groups of prime order $p$ endowed with a \textit{pairing} $e : \G_1 \times \G_2 \rightarrow \G_T$\ifNotCameraReady~\cite{MVO91,Joux00}\fi.
+(We assume symmetric pairings where $\G_1=\G_2$ for simplicity of exposition.)
+$\Gho$ is a hidden-order group.
+We use multiplicative notation for all groups.
+$\omega$ is a primitive $n$th root of unity in $\Zp$~\cite{vG13ModernCh8}.
+$\poly(\cdot)$ is any function upper-bounded by some univariate polynomial.
+$\negl(\cdot)$ is any negligible function.
+$\log{x}$ and $\lg{x}$ are shorthand for $\log_2{x}$.
+$[i,j] = \{i,i+1,\dots,j-1,j\}$, $[0,n) =[0,n-1]$ and $[n]=[1,n]$.
+$\vect{v}=(v_i)_{i\in[0,n)}$ is a vector of size $n$ with elements $v_i\in \Zp$.
+
+\ifCameraReady
+\parhead{Lagrange Interpolation.}
+\else
+\subsection{Lagrange Polynomial Interpolation}
+\label{s:prelim:interpolation}
+\fi
+Given $n$ pairs $(x_i, y_i)_{i\in[0,n)}$, we can find or \textit{interpolate} the \textit{unique} polynomial $\phi(X)$ of degree $<n$ such that $\phi(x_i) = y_i, \forall i\in[0,n)$ using \textit{Lagrange interpolation}\ifNotCameraReady~\cite{BT04}\fi\xspace in $O(n\log^2{n})$ time~\cite{vG13ModernCh10} as
+$\phi(X) = \sum_{i\in[0,n)} \lagr_i(X) y_i$, where $\lagr_i(X) = \prod_{\substack{j\in [0,n),j\ne i}}\frac{X-x_j}{x_i-x_j}$.
+Recall that a \textit{Lagrange polynomial} $\lagr_i(X)$ has the property that $\lagr_i(x_i) = 1$ and $\lagr_i(x_j)=0, \forall i,j\in[0,n)$ with $j \ne i$.
+Note that $\lagr_i(X)$ is defined in terms of the $x_i$'s which, throughout this paper, will be either $(\omega^i)_{i\in[0,n)}$ or $(\omega^i)_{i\in I}, I\subset [0,n)$.
+
+\subsection{KZG Polynomial Commitments}
+\label{s:prelim:polycommit:kzg}
+
+Kate, Zaverucha and Goldberg (KZG) proposed a \textit{constant-sized} commitment scheme for degree $n$ polynomials $\phi(X)$.
+Importantly, an \textit{evaluation proof} for any $\phi(a)$ is constant-sized and constant-time to verify; it does not depend in any way on the degree of the committed polynomial.
+KZG requires public parameters $(g^{\tau^i})_{i\in[0,n]}$, which can be computed via a decentralized MPC protocol~\cite{BGM17} that hides the \textit{trapdoor} $\tau$.
+KZG is computationally-hiding under the discrete log assumption and computationally-binding under $n$-SDH~\cite{BB08j}.
+
+\parhead{Committing.}
+Let $\phi(X)$ denote a polynomial of degree $d\le n$ with coefficients $c_0, c_1, \dots, c_d$ in $\Zp$.
+A KZG commitment to $\phi(X)$ is a single group element $C = \prod_{i=0}^d {\left(g^{\tau^i}\right)^{c_i}} = g^{\sum_{i=0}^d c_i \tau^i} = g^{\phi(\tau)}$.
+Committing to $\phi(X)$ takes $\Theta(d)$ time.
+
+\parhead{Proving One Evaluation.}
+To compute an \textit{evaluation proof} that $\phi(a) = y$, KZG leverages the polynomial remainder theorem, which says $\phi(a) = y \Leftrightarrow \exists q(X)\ \text{such that}\ \phi(X) - y = q(X)(X-a)$.
+The proof is just a KZG commitment to $q(X)$: a single group element $\pi=g^{q(\tau)}$.
+Computing the proof takes $\Theta(d)$ time.
+To verify $\pi$, one checks (in constant time) if
+$
+e(C / g^y, g)            = e(\pi, g^{\tau}/g^a) \Leftrightarrow
+e(g^{\phi(\tau) - y}, g) = e(g^{q(\tau)},g^{\tau-a})\Leftrightarrow
+\ifNotCameraReady
+e(g,g)^{\phi(\tau)-y}   = e(g,g)^{q(\tau)(\tau-a)} \Leftrightarrow
+\fi
+{\phi(\tau)-y}          = q(\tau)(\tau-a)
+$.
+
+\parhead{Proving Multiple Evaluations.}
+Given a set of points $I$ and their evaluations $\{\phi(i)\}_{i\in I}$, KZG can prove all evaluations with a constant-sized \textit{batch proof} rather than $|I|$ individual proofs.
+The prover computes an \textit{accumulator polynomial} $a(X)=\prod_{i\in I} (X-i)$ in $\Theta(|I|\log^2{|I|})$ time and computes $\phi(X)/a(X)$ in $\Theta(d\log{d})$ time, obtaining a quotient $q(X)$ and remainder $r(X)$.
+The batch proof is $\pi_I=g^{q(\tau)}$.
+To verify $\pi_I$ and $\{\phi(i)\}_{i\in I}$ against $C$, the verifier first computes $a(X)$ from $I$ and interpolates $r(X)$ such that $r(i)=\phi(i), \forall i \in I$ in $\Theta(|I|\log^2{|I|})$ time\ifNotCameraReady\xspace(see \cref{s:prelim:interpolation})\fi.
+Next, she computes $g^{a(\tau)}$ and $g^{r(\tau)}$.
+Finally, she checks if $e(C / g^{r(\tau)}, g) = e(g^{q(\tau)}, g^{a(\tau)})$.
+We stress that batch proofs are only useful when $|I| \le d$.
+Otherwise, if $|I| > d$, the verifier can interpolate $\phi(X)$ directly from the evaluations, which makes verifying any $\phi(i)$ trivial.
+
+\subsection{Account-based Stateless Cryptocurrencies}
+\label{s:prelim:stateless-cryptocurrency}
+
+In a stateless cryptocurrency based on VCs~\cite{CPZ18}, there are \textit{miners} running a permissionless consensus algorithm~\cite{Nakamoto08} and \textit{users}, numbered from $0$ to $n-1$ who have \textit{accounts} with a \textit{balance} of coins.
+($n$ can be $\infty$ if the VC is unbounded.)
+For simplicity of exposition, we do not give details on the consensus algorithm, on transaction signature verification nor on monetary policy.
+\ifNotCameraReady
+These all remain the same as in previous stateful cryptocurrencies.
+\fi
+
+\parhead{The (Authenticated) State.}
+The \textit{state} is an \textit{authenticated data structure (ADS)} mapping each user $i$'s \textit{public key} to their account balance $\bal_i$.
+(In practice, the mapping is also to a \textit{transaction counter} $c_i$, which is necessary to avoid transaction replay attacks.
+We address this in \cref{s:discussion:txn-counters}.)
+Importantly, miners and users are \textit{stateless}: they do not store the state, just its \textit{digest} $d_t$ at the latest block $t$ they are aware of.
+Additionally, each user $i$ stores a proof $\pi_{i,t}$ for their account balance that verifies against $d_t$.
+%Note that some miners and/or users might be out of sync and have an earlier digest $d_{t-\Delta}$.
+
+\parhead{Miners.}
+Despite miners being stateless, they can still validate transactions, assemble them into a new \textit{block}, and propose that block.
+Specifically, a miner can verify every new transaction spends valid coins by checking the sending user's balance against the latest digest $d_t$.
+This requires each user $i$ who sends coins to $j$ to include her proof $\pi_{i,t}$ in her transaction.
+Importantly, user $i$ should not have to include the recipient's proof $\pi_{j,t}$ in the transaction, since that would require interacting with \textit{proof-serving nodes} (see \cref{s:stateless-cryptocurrency:proof-serving-nodes})
+
+Once the miner has a set $V$ of valid transactions, he can use them to create the next block ${t+1}$ and propose it.
+The miner obtains this new block's digest $d_{t+1}$ by ``applying'' all transactions in $V$ to $d_t$.
+When other miners receive this new block ${t+1}$, they can validate its transactions from $V$ against $d_t$ and check that the new digest $d_{t+1}$ was produced correctly from $d_t$ by ``reapplying'' all the transactions from $V$.
+
+\parhead{Users.}
+When creating a transaction \tx for block $t+1$, user $i$ includes her proof $\pi_{i,t}$ for miners to verify she has sufficient balance.
+% ...and her counter is correct.
+When she sees a new block ${t+1}$, she can update her proof $\pi_{i,t}$ to a new proof $\pi_{i,t+1}$, which verifies against the new digest $d_{t+1}$.
+For this, she will look at all changes in balances $(j, \Delta\bal_j)_{j\in J}$, where $J$ is the set of users with transactions in block ${t+1}$, and ``apply'' those changes to her proof.
+%(Similarly, when a miner sees a transaction from a user with a proof $\pi_{i,t-\Delta}$ w.r.t. to an earlier digest, the miner can update that proof to $\pi_{i,t}$ by keeping a window of the last $\Delta+1$ blocks and its transactions and applying those to the users proof.)
+Similarly, miners can also update proofs of pending transactions which did not make it in block $t$ and now need a proof w.r.t. $d_{t+1}$
+
+Users assume that the consensus mechanism produces correct blocks.
+As a result, they do \textit{not} need to verify transactions in the block; they only need to update their own proof.
+Nonetheless, since block verification is stateless and fast, users could easily participate as block validators, should they choose to.

@@ -1,0 +1,27 @@
+\ifCameraReady
+\else
+\section{Closed-form Formula for Evaluating the Derivative of $X^n - 1$ at Roots of Unity}
+\label{app:xn-1-derivative}
+
+Let $A(X)=X^n - 1$ and recall that $\lagr_i(X) = \frac{A(X)}{A'(\omega^i)\cdot(X-\omega^i)}$ (see \cref{s:prelim:partial-fraction-decomposition}).
+Let $A'(X)$ be the derivative of $X^n - 1$ and let $g(x)=A(X)/(X-\omega^i)$.
+
+First, note that $A'(\omega^i)=g(\omega^i)$.
+Second, by carrying out the division of $X^n -1$ by $(X-\omega^i)$, one can verify that:
+
+\begin{align}
+g(x) = (\omega^i)^0 X^{n-1} + (\omega^i)^1 X^{n-2} + (\omega^i)^2 X^{n-3} + \dots + (\omega^i)^{n-2} X^1 + (\omega^i)^{n-1} X^0
+\end{align}
+
+Third, evaluating $A'(X)$ at $X=\omega^i$ gives:
+
+\begin{align}
+A'(\omega^i) = g(\omega^i) &= (\omega^i)^0 \omega^{i(n-1)} + (\omega^i)^1 \omega^{i(n-2)} + (\omega^i)^2 \omega^{i(n-3)} + \dots + (\omega^i)^{n-2} \omega^{i\cdot1} + (\omega^i)^{n-1} \omega^{i\cdot0}\\
+&= n\omega^{i(n-1)} = n(\omega^{i\cdot n-i})=n\omega^{-i}
+\end{align}
+
+\input{appendix-dft-pp}
+\input{appendix-sec-proofs}
+\input{appendix-complexity-kog}
+\input{appendix-complexity-hog}
+\fi

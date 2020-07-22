@@ -1,0 +1,113 @@
+% This is based on the LLNCS.DEM the demonstration file of
+% the LaTeX macro package from Springer-Verlag
+% for Lecture Notes in Computer Science,
+% version 2.4 for LaTeX2e as of 16. April 2010
+%
+% See http://www.springer.com/computer/lncs/lncs+authors?SGWID=0-40209-0-0-0
+% for the full guidelines.
+
+%
+% Defines for camera-ready version
+%
+\newif\ifCameraReady
+%\CameraReadytrue    % uncomment for camera-ready version
+% You can now use \ifCameraReady bla \else blabla \fi throughout paper
+
+\newif\ifNotCameraReady
+\ifCameraReady\NotCameraReadyfalse\else\NotCameraReadytrue\fi
+% You can also use \ifNotCameraReady bla \fi (in case you want to avoid the annoying extra \else)
+
+\documentclass[runningheads]{llncs}
+
+\input{includes}
+\input{defs}
+
+\raggedbottom % otherwise pages that have just a few sentences on it get "stretched" so the sentences take up all vertical space
+% make sure we have numbering for \subsubsection
+\setcounter{secnumdepth}{3}
+
+\title{Aggregatable Subvector Commitments for Stateless Cryptocurrencies}
+
+%
+%\titlerunning{Hamiltonian Mechanics}  % abbreviated title (for running head)
+%                                     also used for the TOC unless
+%                                     \toctitle is used
+%
+\author{
+    Alin Tomescu\textsuperscript{\Letter,} \inst{1}$^,$\orcidID{0000-0002-6896-1380}
+     \and
+    Ittai Abraham\inst{1} \and
+    Vitalik Buterin\inst{2} \and\\
+    Justin Drake\inst{2} \and
+    Dankrad Feist\inst{2} \and
+    Dmitry Khovratovich\inst{2}\\
+    \email{\{alint,iabraham\}@vmware.com},
+    \email{\{vitalik,justin,dankrad,dmitry.khovratovich\}@ethereum.org}
+}
+
+\authorrunning{
+	Tomescu et al.
+} % abbreviated author list (for running head)
+
+%%%% list of authors for the TOC (use if author list has to be modified)
+%\tocauthor{Ivar Ekeland, Roger Temam, Jeffrey Dean, David Grove,
+%Craig Chambers, Kim B. Bruce, and Elisa Bertino}
+%
+% \institute{Princeton University, Princeton NJ 08544, USA,\\
+
+% %WWW home page: \texttt{http://users/\homedir iekeland/web/welcome.html}
+% \and
+% Universit\'{e} de Paris-Sud,
+% Laboratoire d'Analyse Num\'{e}rique, B\^{a}timent 425,\\
+% F-91405 Orsay Cedex, France}
+
+\institute{
+	VMware Research, Palo Alto, CA, US
+    \and Ethereum Foundation, Singapore, Singapore
+}
+
+%\pagestyle{plain}
+%\pagestyle{fancy}
+%\fancyhf{}
+%\lhead{Please do \textbf{NOT} distribute.}
+%\rhead{Thank you!}
+%\lfoot{Please do \textbf{NOT} distribute.}
+%\rfoot{Thank you! Page \thepage}
+
+\begin{document}
+
+\maketitle              % typeset the title of the contribution
+
+\begin{abstract}
+\input{abstract}
+\end{abstract}
+
+%\newpage
+
+\input{tables}
+
+\input{intro}
+\input{background}
+\input{asvc}
+\input{asvc-kzg}
+\input{apps}
+\input{conclusion}
+
+%
+% ---- Bibliography ----
+%
+\ifNotCameraReady
+\pagebreak
+\fi
+%\bibliographystyle{abbrv} % for numbers
+\bibliographystyle{alpha} % for letters
+\bibliography{references,references-extra}
+\pagebreak
+
+%
+% ---- Appendix ----
+%
+\pagebreak
+\appendix
+\input{appendix}
+\end{document}

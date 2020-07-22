@@ -1,0 +1,7 @@
+An \textit{aggregatable subvector commitment (aSVC)} scheme is a \textit{vector commitment (VC)} scheme that can aggregate multiple proofs into a single, small subvector proof.
+In this paper, we formalize aSVCs and give a construction from constant-sized polynomial commitments.
+Our construction is unique in that it has linear-sized public parameters, it can compute all constant-sized proofs in quasilinear time, it updates proofs in constant time and it can aggregate multiple proofs into a constant-sized subvector proof.
+Furthermore, our concrete proof sizes are small due to our use of pairing-friendly groups.
+We use our aSVC to obtain a payments-only stateless cryptocurrency with very low communication and computation overheads.
+Specifically, our constant-sized, aggregatable proofs reduce each block's proof overhead to a single group element, which is optimal.
+Furthermore, our subvector proofs speed up block verification and our smaller public parameters further reduce block size.

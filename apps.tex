@@ -1,0 +1,195 @@
+\section{A Highly-efficient Stateless Cryptocurrency}
+\label{s:stateless-cryptocurrency}
+
+In this section, we enhance Edrax's elegant design by replacing their VC with our secure \textit{aggregatable} subvector commitment (aSVC) scheme from \cref{s:asvc:from-kzg}.
+As a result, our stateless cryptocurrency has smaller, aggregatable proofs and smaller update keys.
+This leads to smaller, faster-to-verify blocks for miners and faster proof synchronization for users (see \cref{t:stateless-comparison}).
+Furthermore, our verifiable update keys reduce the storage overhead of miners from $O(n)$ update keys to $O(1)$.
+We also address a denial of service (DoS) attack in Edrax's design.
+
+\subsection{From VCs to Stateless Cryptocurrencies}
+\label{s:stateless-cryptocurrency:edrax}
+Edrax pioneered the idea of building account-based, stateless cryptocurrencies on top of any VC scheme~\cite{CPZ18}.
+In contrast, previous approaches were based on \textit{authenticated dictionaries (ADs)}~\cite{RMCI17,Buterin17}, for which efficient constructions with static update keys are not known.
+In other words, these AD-based approaches used \textit{dynamic update hints} $\uph_j$ consisting of the proof for position $j$.
+This complicated their design, requiring user $i$ to ask a \textit{proof-serving node} for user $j$'s proof in order to create a transaction sending money to $j$.
+
+\parhead{Trusted Setup.}
+To support up to $n$ users, public parameters $(\prk,\vrk$, \ifCameraReady\linebreak[4]\fi$(\upk_i)_{i\in[0,n)})\leftarrow \vcsetup(1^{\lambda}, n)$ are generated via a \textit{trusted setup}, which can be decentralized using MPC protocols~\cite{BGM17}.
+Miners need to store all $O(n)$ update keys to propose blocks and to validate blocks (which we fix in \cref{s:stateless-cryptocurrency:dos-update-key}).
+The $\prk$ is only needed for \textit{proof-serving nodes} (see \cref{s:stateless-cryptocurrency:proof-serving-nodes}).
+
+\parhead{The (Authenticated) State.}
+The state is a vector $\vect{v}=(v_i)_{i\in[0,n)}$ of size $n$ that maps user $i$ to $v_i=(\addr_i|\bal_i)\in \Zp$, where $\bal_i$ is her balance and $\addr_i$ is her \textit{address}, which we define later.
+(We discuss including transaction counters for preventing replay attacks in \cref{s:discussion:txn-counters}.)
+Importantly, since $p \approx 2^{256}$, the first 224 bits of $v_i$ are used for $\addr_i$ and the last 32 bits for $\bal_i$.
+%This means that $H(\cdot)$ outputs only 224 bits.
+The genesis block's state is the all zeros vector with digest $d_0$
+(e.g., in our aSVC, $d_0=g^0$).
+Initially, each user $i$ is \textit{unregistered} and starts with a proof $\pi_{i,0}$ that their $v_i = 0$.
+% i.e., $\forall i, \vcverifypos(\vrk, d_0, 0, i,\pi_{i,0})=T$.
+
+\parhead{``Full'' vs. ``Traditional'' Public Keys.}
+User $i$'s address is computed as $\addr_i=H(\PK_i)$, where $\PK_i=(i,\upk_i,\tpk_i)$ is her \textit{full public key}\ifNotCameraReady\xspace and $H$ is a collision-resistant hash function\fi.
+Here, $\tpk_i$ denotes a \textit{``traditional'' public key} for a digital signature scheme, with corresponding secret key $\tsk_i$ used to authorize user $i$'s transactions.
+To avoid confusion, we will clearly refer to public keys as either ``full'' or ``traditional.''
+
+\parhead{Registering via \inittxn Transactions.}
+\inittxn transactions are used to \textit{register} new users and assign them a unique, ever-increasing number from $1$ to $n$.
+For this, each block $t$ stores a \textit{count of users registered so far} $\cnt_t$.
+To register, a user generates a \textit{traditional secret key} $\tsk$ with a corresponding \textit{traditional public key} $\tpk$.
+Then, she broadcasts an \inittxn transaction:
+$$\tx=[\inittxn, \tpk]$$
+A miner working on block ${t+1}$ who receives $\tx$, proceeds as follows.
+\begin{enumerate}
+\item He sets $i=\cnt_{t+1}$ and increments the count $\cnt_{t+1}$ of registered users,
+\item He updates the VC via $d_{t+1}=\vccommupdate(d_{t+1}, (\addr_i\vert 0), i, \upk_i)$,
+\item He incorporates $\tx$ in block $t+1$ as $\tx' = [\inittxn, (i, \upk_i,\tpk_i)]=[\inittxn, \PK_i]$.
+\end{enumerate}
+The full public key with $\upk_i$ is included so other users can correctly update their VC when they process $\tx'$.
+\ifNotCameraReady
+(The index $i$ is not necessary, since it can be computed from the block's $\cnt_{t+1}$ and the number of \inittxn transactions processed in the block so far.)
+\fi
+Note that to compute $\addr_i=H(\PK_i)$, the miner needs to have the correct $\upk_i$ which requires $O(n)$ storage.
+We discuss how to avoid this in \cref{s:stateless-cryptocurrency:dos-update-key}.
+
+\parhead{Transferring Coins via \spendtxn Transactions.}
+When transferring $v$ coins to user $j$, user $i$ (who has $v'\ge v$ coins) must first obtain $\PK_j=(j, \upk_j,\tpk_j)$.
+This is similar to existing cryptocurrencies, except the (full) public key is now slightly larger.
+Then, user $i$ broadcasts a \spendtxn transaction, signed with her $\tsk_i$:
+$$\tx=[\spendtxn, t, \PK_i, j, \upk_j, v,\pi_{i,t}, v']$$
+% Note that miners will use $\tpk_i$ from $\PK_i$ to verify user $i$'s signature on this transaction, but they do not need user $j$'s $\tpk_j$ for anything.
+% Don't they need \tpk_j to compute addr_j and update the digest with j's new balance?
+% Nope, because only the value 'v' needs to be accumulated in the digest, while leaving addr_j intact.
+
+A miner working on block ${t+1}$ processes this \spendtxn transaction as follows:
+\begin{enumerate}
+\item He checks that $v\le v'$ and verifies the proof $\pi_{i,t}$ that user $i$ has $v'$ coins via $\vcverifypos(\vrk, d_t, (\addr_i|v'), i, \pi_{i,t})$.
+(If the miner receives another transaction from user $i$, it needs to carefully account for $i$'s new $v'-v$ balance.)
+\item He updates $i$'s balance in block $t+1$ with $d_{t+1}=\vccommupdate(d_{t+1}, -v, i$, $\upk_i)$,
+which only sets the lower order bits of $v_i$ corresponding to $\bal_i$, without touching the higher order bits for $\addr_i$.
+\item He does the same for $j$ with $d_{t+1}=\vccommupdate(d_{t+1}$, $+v, j, \upk_j)$.
+\end{enumerate}
+% To verify a batch of txns from $i$, just verify all the proofs first, then update commitment!
+
+\parhead{Validating Blocks.}
+Suppose a miner receives a new block $t+1$ with digest $d_{t+1}$ that has $b$ \spendtxn transactions:
+$$\tx=[\spendtxn, t, \PK_{i}, {j}, \upk_{j}, v, \pi_{i,t}, v']$$
+To validate this block, the miner (who has $d_t$) proceeds in three steps (\inittxn transactions can be handled analogously):
+
+\paragraph{Step 1: Check Balances.}
+First, for each $\tx$, he checks that $v \le v'$ and that user $i$ has balance $v'$ via $\vcverifypos(\vrk, d_t$, $(\addr_{i}|v'), i, \pi_{i,t})=T$.
+Since the sending user $i$ might have multiple transactions in the block, the miner has to carefully keep track of each sending user's balance to ensure it never goes below zero.
+
+\paragraph{Step 2: Check Digest.}
+Second, he checks $d_{t+1}$ has been computed correctly from $d_t$ and from the new transactions in block $t+1$.
+Specifically, he sets $d'=d_t$ and for each $\tx$, he computes $d' = \vccommupdate(d', -v, i, \upk_{i})$ and $d'=\vccommupdate(d',+v$, $j,\upk_{j})$.
+Then, he checks that $d'=d_{t+1}$.
+
+\paragraph{Step 3: Update Proofs, If Any.}
+If the miner lost the race to build block $t+1$, he can start mining block $t+2$ by ``moving over'' the \spendtxn transactions from his unmined block.
+For this, he updates all proofs in those \spendtxn transactions, so they are valid against the new digest $d_{t+1}$.
+%However, some of those transactions might now be invalid because the sending users' balance is too low.
+% For example, this can happen if that user sent another transaction that got included in block $t+1$ and consumed too much of her balance.
+Similarly, the miner must also ``move over'' all \inittxn transactions, since block $t+1$ might have registered new users.
+
+\parhead{User Proof Synchronization.}
+Consider a user $i$ who has processed the ledger up to time $t$ and has digest $d_t$ and proof $\pi_{i,t}$.
+Eventually, she receives a new block $t+1$ with digest $d_{t+1}$ and needs to update her proof so it verifies against $d_{t+1}$.
+Initially, she sets $\pi_{i,t+1} = \pi_{i,t}$.
+For each $[\inittxn,\PK_j]$ transaction, she updates her proof $\pi_{i,t+1} = \vcproofupdate(\pi_{i,t+1}, (H(\PK_j)|0), i,j, \upk_i, \upk_j)$.
+For each $[\spendtxn, t, \PK_j, k, \upk_k, v,\pi_{j,t}, v']$, she updates her proof twice: $\pi_{i,t+1} =\vcproofupdate(\pi_{i,t+1}, -v, i,j, \upk_i,\upk_j)$ and $\pi_{i,t+1} =\vcproofupdate(\pi_{i,t+1}$, $+v, i, k, \upk_i,\upk_k)$.
+We stress that users can safely be offline and miss new blocks.
+Eventually, when a user comes back online, she downloads the missed blocks, updates her proof and is ready to transact.
+
+\subsection{Efficient Stateless Cryptocurrencies from aSVCs}
+In this subsection, we explain how replacing the Edrax VC with our aSVC from \cref{s:asvc:from-kzg} results in a more efficient stateless cryptocurrency (see \cref{t:stateless-comparison}).
+Then, we address a denial of service attack on user registrations in Edrax.
+
+\subsubsection{Smaller, Faster, Aggregatable Proofs}
+Our aSVC enables miners to aggregate all $b$ proofs in a block of $b$ transactions into a single, constant-sized proof.
+This drastically reduces Edrax's per-block proof overhead from $O(b\log{n})$ group elements to just one group element.
+Unfortunately, the $b$ update keys cannot be aggregated, but we still reduce their overhead from $O(b\log{n})$ to $b$ group elements per block (see \cref{s:stateless-cryptocurrency:smaller-update-keys}).
+% (for users and miners to update their proofs and/or digest)
+Our smaller proofs are also faster to update, taking $O(1)$ time rather than $O(\log{n})$.
+While verifying an aggregated proof in our aSVC is $O(b\log^2{b})$ time, which is asymptotically slower than the $O(b)$ time for verifying $b$ individual ones, it is still \textit{concretely} faster as it only requires two, rather than $O(b)$, cryptographic pairings.
+This makes validating new blocks much faster in practice.
+
+\subsubsection{Reducing Miner Storage Using Verifiable Update Keys}
+\label{s:stateless-cryptocurrency:dos-update-key}
+
+We stress that miners must validate update keys before using them to update a digest.
+Otherwise, they risk corrupting that digest, which results in a denial of service.
+Edrax miners sidestep this problem by simply storing all $O(n)$ update keys.
+Alternatively, Edrax proposes outsourcing update keys to an untrusted third party via a static Merkle tree.
+Unfortunately, this would either require interaction \textit{during block proposal and block validation} or would double the update key size.
+\ifNotCameraReady
+For example, miners would need to fetch the correct update key and/or its Merkle proof to process a \spendtxn transaction.
+\fi
+Our implicitly-verifiable update keys avoid these pitfalls, since miners can directly verify the update keys in a \spendtxn transaction via \vcverifyupk.
+Furthermore, for \inittxn transactions, miners can fetch (in the background) a running window of the update keys needed for the next $k$ registrations.
+By carefully upper-bounding the number of registrations expected in the near future, we can avoid interaction during the block proposal.
+This background fetching could be implemented in Edrax too, either with a small overhead via Merkle proofs or by making their update keys verifiable (which seems possible).
+
+\subsubsection{Smaller Update Keys}
+\label{s:stateless-cryptocurrency:smaller-update-keys}
+Although, in our aSVC, $\upk_i$ contains $a_i=g^{A(\tau)/(X-\omega^i)}$ and $u_i=g^{\frac{\lagr_i(\tau)-1}{X-\omega^i}}$, miners only need to include $a_i$ in the block.
+This is because of two reasons.
+First, user $i$ already has $u_i$ to update her own proof after changes to her own balance.
+Second, no other user $j\ne i$ will need $u_i$ to update her proof $\pi_j$.
+However, as hinted in \cref{s:stateless-cryptocurrency:edrax}, miners actually need $u_i$ when only a subset of $i$'s pending transactions get included in block $t$.
+In this case, the excluded transactions must have their proofs updated using $u_i$ so they can be included in block $t+1$.
+Fortunately, this is not a problem, since miners always receive $u_i$ with user $i$'s transactions.
+The key observation is that they do not have to include $u_i$ in the mined block, since users do not need it.
+
+\subsubsection{Addressing DoS Attacks on User Registrations.}
+\label{s:stateless-cryptocurrency:dos-registration}
+
+Unfortunately, the registration process based on \inittxn transactions is susceptible to Denial of Service (DoS) attacks:
+an attacker can simply send a large number of \inittxn transactions and quickly exhaust the free space in the vector $\vect{v}$.
+There are several ways to address this.
+First, one can use an aSVC from hidden-order groups, which supports an unbounded number of elements~\cite{CFG+20}.
+However, that would negatively impact performance.
+Second, as future work, one could develop and use unbounded, authenticated dictionaries \textit{with scalable updates}.
+Third, one could simply use multiple bounded aSVCs together with cross-commitment proof aggregation, which our aSVC supports~\cite{GRWZ20}.
+Lastly, one can add a cost to user registrations via a new \initspendtxn transaction that registers a user $j$ by having user $i$ send her some coins:
+$$[\initspendtxn, t, \PK_i, \tpk,v,\pi_{i,t}, v'],\ \text{where}\ 0 < v \le v'$$
+%User $i$ would sign this \initspendtxn transaction using her $\tpk_i$, similar to a \spendtxn transaction.
+Miners processing this transaction would first register a new user $j$ with traditional public key $\tpk$ and then transfer her $v$ coins.
+We stress that this is how existing cryptocurrencies operate anyway: in order to join, one has to be transferred some coins from existing users.
+Lastly, we can ensure that each \tpk is only registered once by including in each \inittxn/\initspendtxn transaction a non-membership proof for $\tpk$ in a Merkle prefix tree of all TPKs.
+We leave a careful exploration of this to future work.
+
+Finally, miners (and only miners) will be allowed to create a \textit{single} $[\inittxn, \PK_i]$ transaction per block to register themselves.
+This has the advantage of letting new miners join, without ``permission'' from other miners or users, while severely limiting DoS attacks, since malicious miners can only register a new user per block.
+Furthermore, transaction fees and/or additional proof-of-work can also severely limit the frequency of \initspendtxn transactions.
+
+\subsubsection{Minting Coins and Transaction Fees.}
+Support for minting new coins can be added with a new \minttxn transaction type:
+$$\tx = [\minttxn, i, \upk_i, v]$$
+Here, $i$ is the miner's user account and $v$ is the amount of newly minted coins.
+(Note that miners must register as users using $\inittxn$ transactions if they are to receive block rewards.)
+%When this \minttxn transaction is processed by other users or miners, they update their digest $d_t$ using $\vccommupdate(d_t, +v, i, \upk_i)$.
+%(In addition, users also update their proofs.)
+To support transaction fees, we can extend the \spendtxn transaction format to include a fee, which is then added to the miner's block reward specified in the \minttxn transaction.
+
+\subsection{Discussion}
+
+\subsubsection{Making Room for Transaction Counters}
+\label{s:discussion:txn-counters}
+As mentioned in \cref{s:prelim:stateless-cryptocurrency}, to prevent transaction replay attacks, account-based stateless cryptocurrencies such as Edrax should actually map a user $i$ to $v_i = (\addr_i\vert c_i\vert\bal_i)$, where $c_i$ is her \textit{transaction counter}.
+This change is trivial, but does leave less space in $v_i$ for $\addr_i$, depending on how many bits are needed for $c_i$ and $\bal_i$.
+(Recall that $v_i\in\Zp$ typically has $\approx$ 256 bits.)
+To address this, we propose using one aSVC for mapping $i$ to $\addr_i$ and another aSVC for mapping $i$ to $(c_i\vert\bal_i)$.
+Our key observation is that if the two aSVCs use different $n$-SDH parameters (e.g., $(g^{\tau^i})$'s and $(h^{\tau^i})$'s, such that $\log_g{h}$ is unknown), then we could aggregate commitments, proofs and update keys so as to introduce zero computational and communication overhead in our stateless cryptocurrency.
+Security of this scheme could be argued similar to security of perfectly hiding KZG commitments~\cite{KZG10a}, which commit to $\phi(X)$ as $g^{\phi(\tau)}h^{r(\tau)}$ in an analogous fashion.
+We leave investigating the details of this scheme to future work.
+
+\subsubsection{Overhead of Synchronizing Proofs}
+\label{s:stateless-cryptocurrency:proof-serving-nodes}
+In a stateless cryptocurrency, users need to keep their proofs updated w.r.t. the latest block.
+For example, in our scheme, each user spends $O(b\cdot \Delta{t})$ time updating her proof, if there are $\Delta{t}$ new blocks of $b$ transactions each.
+Fortunately, when the underlying VC scheme supports precomputing all $n$ proofs fast~\cite{Tomescu20}, this overhead can be shifted to untrusted third parties called \textit{proof-serving nodes}~\cite{CPZ18}.
+Specifically, a proof-serving node would have access to the proving key \prk and periodically compute all proofs for all $n$ users.
+Then, any user with an out-of-sync proof could ask a node for their proof and then manually update it, should it be slightly out of date with the latest block.
+Proof-serving nodes save users a significant amount of proof update work, which is important for users running on constrained devices such as mobile phones.

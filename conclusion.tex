@@ -1,0 +1,9 @@
+\section{Conclusion}
+In this paper, we formalized a new cryptographic primitive called an \textit{aggregatable subvector commitment (aSVC)} that supports aggregating and updating proofs (and commitments) using only constant-sized, static auxiliary information referred to as an ``update key.''
+We constructed an efficient aSVC from KZG commitments to Lagrange polynomials which, compared to other pairing-based schemes, can precompute, aggregate and update proofs efficiently and, compared to schemes from hidden-order groups, has smaller proofs and should perform better in practice.
+Lastly, we continued the study of stateless validation initiated by Chepurnoy et al., improving block validation time and block size, while addressing attacks and limitations.
+We hope our work will ignite further research into stateless validation for payments and smart contracts and lead to improvements both at the theoretical and practical level.
+
+\subsubsection*{Acknowledgements}
+The authors want to thank Madars Virza for pointing out the Lagrange-based approach to VCs and the DFT technique for computing all KZG commitments to Lagrange polynomials.
+We also thank Leonid Reyzin and Dimitris Kolonelos for corrections and productive conversations that helped improve this paper.

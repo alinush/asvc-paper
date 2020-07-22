@@ -1,0 +1,209 @@
+\subsection{aSVC From KZG Commitments to Lagrange Polynomials}
+\label{s:asvc:from-kzg}
+
+In this subsection, we present our aSVC from KZG commitments to Lagrange polynomials.
+Similar to previous work, we represent a vector $\vect{v} = [v_0, v_1, \dots, v_{n-1}]$ as a polynomial $\phi(X)=\sum_{i\in[0,n)} \lagr_i(X)v_i$ in Lagrange basis~\cite{KZG10a,CDHK15,Tomescu20,GRWZ20}.
+However, unlike previous work, we add support for efficiently updating and aggregating proofs.
+For aggregation, we use known techniques for aggregating KZG proofs via \textit{partial fraction decomposition}~\cite{Buterin20UsingPoly}.
+For updating proofs, we introduce a new mechanism to reduce the update key size from linear to constant.
+We use \textit{roots of unity} and ``store'' $v_i$ as $\phi(\omega^i)=v_i$, which means our Lagrange polynomials are $\lagr_i(X)=\prod_{j\in [0,n),j\ne i} \frac{X-\omega^j}{\omega^i - \omega^j}$.
+For this to work \textit{efficiently}, we assume without loss of generality that $n$ is a power of two.
+
+
+\parhead{Committing.}
+A commitment to $\vect{v}$ is just a KZG commitment $c=g^{\phi(\tau)}$ to $\phi(X)$, where $\tau$ is the trapdoor of the KZG scheme (see \cref{s:prelim:polycommit:kzg}).
+Similar to previous work~\cite{CDHK15}, the proving key includes commitments to all Lagrange polynomials $\ell_i = g^{\lagr_i(\tau)}$.
+Thus, we can compute $c=\prod_{i=1}^n (\ell_i)^{v_i}$ in $O(n)$ time without interpolating $\phi(X)$ and update it as
+$c' = c\cdot (\ell_i)^{\delta}$ after adding $\delta$ to $v_i$.
+Note that $c'$ is just a commitment to an updated $\phi'(X)=\phi(X)+\delta\cdot\lagr_i(X)$.
+
+\parhead{Proving.}
+A proof $\pi_i$ for a single element $v_i$ is just a KZG evaluation proof for $\phi(\omega^i)$.
+A subvector proof $\pi_I$ for for $v_I,I\subseteq[0,n)$ is just a KZG batch proof for all $\phi(\omega^i)_{i\in I}$ evaluations.
+Importantly, we use the Feist-Khovratovich (FK)~\cite{FK20} technique to compute all proofs $(\pi_i)_{i\in[0,n)}$ in $O(n\log{n})$ time.
+% Note: $\phi(X)$ can be interpolated in $O(n\log{n})$ time via an inverse DFT.
+This allows us to aggregate $I$-subvector proofs faster in $O(\vert I \vert \log^2{|I|})$ time (see \cref{t:asvc-comparison}).
+
+\subsection{Partial Fraction Decomposition}
+\label{s:prelim:partial-fraction-decomposition}
+
+A key ingredient in our aSVC scheme is \textit{partial fraction decomposition}\ifNotCameraReady~\cite{PartialFractionDecomposition}\fi, which we re-explain from the perspective of Lagrange interpolation.
+First, let us rewrite the Lagrange polynomial for interpolating $\phi(X)$ given all $\left(\phi(\omega^i)\right)_{i\in I}$:
+{\ifCameraReady\small\fi
+\begin{align}
+\lagr_i(X)=\prod_{j\in I, j\ne i} \frac{X-\omega^j}{\omega^i - \omega^j}=\frac{A_I(X)}{A'_I(\omega^i) (X-\omega^i)},\ \text{where}\ A_I(X)=\prod_{i\in I} (X-\omega^i)
+\end{align}
+}%
+Here, $A'_I(X)=\sum_{j\in[0,n)} A_I(X)/(X-\omega^j)$ is the derivative of $A_I(X)$~\cite{vG13ModernCh10}.
+Next, for any $\phi(X)$, we can rewrite the Lagrange interpolation formula as $\phi(X) = A_I(X)\sum_{i\in[0,n)} \frac{y_i}{A'_I(\omega^i)(X-\omega^i)}$.
+In particular, for $\phi(X)=1$, this implies $\frac{1}{A_I(X)} = \sum_{i\in[0,n)} \frac{1}{A'_I(\omega^i)(X-\omega^i)}$.
+In other words, we can decompose $A_I(X)$ as:
+{\ifCameraReady\small\fi
+\begin{align}
+\frac{1}{A_I(X)} = \frac{1}{\prod_{i \in I} (X-\omega^i)} &= \sum_{i\in[0,n)} c_i\cdot \frac{1}{X-\omega^i},\ \text{where}\ c_i=\frac{1}{A'_I(\omega^i)}
+\end{align}
+}%
+$A_I(X)$ can be computed in $O(|I|\log^2{|I|})$ time\ifNotCameraReady\xspace using a \textit{subproduct tree} and DFT-based polynomial multiplication\fi\xspace\cite{vG13ModernCh10}.
+Its derivative, $A'_I(X)$, can be computed in $O(|I|)$ time and evaluated at all $\omega^i$'s in $O(|I|\log^2{|I|})$ time \cite{vG13ModernCh10}.
+Thus, all $c_i$'s can be computed in $O(|I|\log^2{|I|})$ time.
+For the special case of $I=[0,n)$, we have $A_I(X)=A(X)=\prod_{i\in[0,n)} (X-\omega^i)=X^n - 1$ and $A'(\omega^i)=n\omega^{-i}$ \ifCameraReady~\cite[Appendix A]{TAB+20e}\else\xspace(see \cref{app:xn-1-derivative})\fi.
+In this case, any $c_i$ can be computed in $O(1)$ time.
+
+\subsubsection{Aggregating Proofs}
+\label{s:asvc:from-kzg:aggregating-proofs}
+We build upon Drake and Buterin's observation~\cite{Buterin20UsingPoly} that partial fraction decomposition (see \cref{s:prelim:partial-fraction-decomposition}) can be used to aggregate KZG evaluation proofs.
+Since our VC proofs are KZG proofs, we show how to aggregate a set of proofs $(\pi_i)_{i\in I}$ for elements $v_i$ of $\vect{v}$ into a constant-sized $I$-subvector proof $\pi_I$ for $(v_i)_{i\in I}$.
+
+Recall that $\pi_i$ is a commitment to  $q_i(X)=\frac{\phi(X)-v_i}{X-\omega^i}$ and $\pi_I$ is a commitment to $q(X) = \frac{\phi(X)-R(X)}{A_I(X)}$, where $A_I(X)=\prod_{i\in I} (X-\omega^i)$ and $R(X)$ is interpolated such that $R(\omega^i)=v_i,\forall i\in I$.
+Our goal is to find coefficients $c_i\in \Zp$ such that $q(X)=\sum_{i\in I} c_i q_i(X)$ and thus aggregate $\pi_I=\prod_{i\in I} \pi_i^{c_i}$.
+We observe that:
+{\ifCameraReady\small\fi
+\begin{align}
+q(X)&= \phi(X)\frac{1}{A_I(X)}- R(X)\frac{1}{A_I(X)}\\
+    &= \phi(X)\sum_{i\in I} \frac{1}{A_I'(\omega^i)(X-\omega^i)} - \left(A_I(X)\sum_{i\in I} \frac{v_i}{A_I'(\omega^i)(X-\omega^i)}\right)\cdot \frac{1}{A_I(X)} \\
+	&= \sum_{i\in I} \frac{\phi(X)}{A_I'(\omega^i)(X-\omega^i)} - \sum_{i\in I} \frac{v_i}{A_I'(\omega^i)(X-\omega^i)}
+	= \sum_{i\in I} \frac{1}{A_I'(\omega^i)}\cdot \frac{\phi(X) - v_i}{X-\omega^i}\\
+	&= \sum_{i\in I} \frac{1}{A_I'(\omega^i)}\cdot q_i(X)
+\end{align}
+}%
+Thus, we can compute all $c_i={1}/{A_I'(\omega^i)}$ using $O(\vert I\vert \log^2{\vert I \vert})$ field operations (see \cref{s:prelim:partial-fraction-decomposition}) and compute $\pi_I=\prod_{i\in I} \pi_i^{c_i}$ with an $O(|I|)$-sized multi-exponentiation.
+
+\subsubsection{Updating Proofs}
+\label{s:asvc:from-kzg:updating-proofs}
+
+When updating $\pi_i$ after a change to $v_j$, it could be that either $i=j$ or $i\ne j$.
+First, recall that $\pi_i$ is a KZG commitment to $q_i(X)=\frac{\phi(X)-v_i}{X-\omega^i}$.
+Second, recall that, after a change $\delta$ to $v_j$, the polynomial $\phi(X)$ is updated to $\phi'(X)=\phi(X)+\delta\cdot\lagr_j(X)$.
+We refer to the party updating their proof $\pi_i$ as the \textit{proof updater}.
+
+\parhead{The $i=j$ Case.}
+Consider the quotient polynomial $q_i'(X)$ in the updated proof $\pi_i'$ after $v_i$ changed to $v_i+\delta$:
+{\ifCameraReady\small\fi
+\begin{align}
+q_i'(X) &=\frac{\phi'(X)-(v_i+\delta)}{X-\omega^i}=\frac{\left(\phi(X) + \delta\lagr_i(X)\right) - v_i -\delta}{X-\omega^i}\\
+&=\frac{\phi(X) - v_i}{X-\omega^i}+\frac{\delta(\lagr_i(X)-1)}{X-\omega^i} = q_i(X) + \delta\left(\frac{\lagr_i(X)-1}{X-\omega^i}\right)
+\end{align}
+}%
+This means the proof updater needs a KZG commitment to $\frac{\lagr_i(X)-1}{X-\omega^i}$, which is just a KZG evaluation proof that $\lagr_i(\omega^i)=1$.
+This can be addressed very easily by making this commitment part of $\upk_i$.
+To conclude, to update $\pi_i$, the proof updater obtains $u_i=g^{\frac{\lagr_i(\tau)-1}{\tau - \omega^i}}$ from $\upk_i$ and computes $\pi_i'=\pi_i \cdot \left(u_i\right)^\delta$.
+(Remember that the proof updater, who calls $\vcproofupdate(\pi_i, \delta,i,i,\upk_i,\upk_i)$, has $\upk_i$.)
+
+\parhead{The $i\ne j$ Case.}
+Now, consider the quotient polynomial $q_i'(X)$ after $v_j$ changed to $v_j+\delta$:
+{\ifCameraReady\small\fi
+\begin{align}
+q_i'(X) &= \frac{\phi'(X)-v_i}{X-\omega^i}=\frac{\left(\phi(X) + \delta\lagr_j(X)\right) - v_i}{X-\omega^i}\\
+        &= \frac{\phi(X) - v_i}{X-\omega^i}+\frac{\delta\lagr_j(X)}{X-\omega^i} = q_i(X) + \delta\left(\frac{\lagr_j(X)}{X-\omega^i}\right)
+\end{align}
+}%
+In this case, the proof updater will need to construct a KZG commitment to $\frac{\lagr_j(X)}{X-\omega^i}$.
+For this, we put enough information in $\upk_i$ and $\upk_j$, which the proof updater has (see \cref{s:asvc:defs}), to help her do so.
+
+Since $U_{i,j}(X)=\frac{A(X)}{A'(\omega^j)(X-\omega^j)(X-\omega^i)}$ and $A'(\omega^j) = n\omega^{-j}$\ifNotCameraReady\xspace(see \cref{app:xn-1-derivative})\fi, it is sufficient to reconstruct a KZG commitment to $W_{i,j}(X)=\frac{A(X)}{(X-\omega^j)(X-\omega^i)}$, which can be decomposed as $W_{i,j}(X)= c_i \frac{1}{X-\omega^i} + c_j \frac{1}{X-\omega^j}$, where $c_i = 1/(\omega^i-\omega^j)$ and $c_j=1/(\omega^j-\omega^i)$ (see \cref{s:prelim:partial-fraction-decomposition}).
+Thus, if we include $a_j=g^{{A(\tau)}/(\tau-\omega^j)}$ in each $\upk_j$, the proof updater can first compute $w_{i,j} = a_i^{c_i} a_j^{c_j}$, then compute $u_{i,j}=\left(w_{i,j}\right)^{\frac{1}{A'(\omega^j)}}$ and finally update the proof as  $\pi_i' = \pi_i \cdot (u_{i,j})^\delta$.
+
+\subsubsection{aSVC Algorithms}
+\label{s:asvc:from-kzg:algorithms}
+Having established the intuition for our aSVC, we can now describe it in detail using the aSVC API from \cref{s:prelim:vcs:api}.
+\ifNotCameraReady
+To support verifying $I$-subvector proofs, our verification key is $O(|I|)$-sized.
+\fi
+\\
+
+\api $\vcsetup(1^\lambda, n) \rightarrow \prk,\vrk,(\upk_j)_{j\in[0,n)}$.
+Generates $n$-SDH public parameters $g,g^\tau,g^{\tau^2},\dots,g^{\tau^n}$.
+Computes $a=g^{A(\tau)}$, where $A(X)=X^n - 1$.
+Computes $a_i=g^{A(\tau)/(X-\omega^i)}$ and $\ell_i = g^{\lagr_i(\tau)}, \forall i\in[0,n)$.
+Computes KZG proofs $u_i=g^{\frac{\lagr_i(\tau)-1}{X-\omega^i}}$ for $\lagr_i(\omega^i) = 1$.
+Sets
+$\upk_i = (a_i, u_i)$,
+$\prk = \bigl((g^{\tau^i})_{i\in[0,n]},(\ell_i)_{i\in[0,n)}$, $(\upk_i)_{i\in[0,n)}\bigr)$
+and $\vrk = ((g^{\tau^i})_{i\in [0,|I|]},a)$.
+% Note: User $i$ needs $u_i$ to update their own proof.
+% Note: Does user $j\in[0,n)$ need $\ell_i$ to update digest? If they want to, they can derive $\ell_i$ from $a_i$ which is in $\upk_i$.
+% Note: Miners need $\ell_i$ to update digest, but they derive it from the $a_i$ in $\upk_i$
+
+\api $\vccommit(\prk, \vect{v}) \rightarrow c$. %, \left[(\pi_i)_{i\in[0,n)}\right]$.
+Returns $c=\prod_{i\in[0,n)} (\ell_i)^{v_i}$.
+
+\api $\vcopenpos(\prk, I, \vect{v}) \rightarrow \pi_I$.
+Computes $A_I(X)=\prod_{i\in I} (X-\omega^i)$ in $O(\vert I\vert \log^2{\vert I \vert})$ time.
+Divides $\phi(X)$ by $A_I(X)$ in $O(n\log{n})$ time, obtaining a quotient $q(X)$ and a remainder $r(X)$.
+Returns $\pi_I = g^{q(\tau)}$.
+(We give an $O(n)$ time algorithm in \ifCameraReady~\cite[Appendix D.7]{TAB+20e}\else\cref{s:complexity-lagrange-asvc}\fi\xspace for the $\vert I\vert = 1$ case.)
+
+\api $\vcverifypos(\vrk, c, \vect{v}_I, I, \pi_I) \rightarrow T/F$.
+Computes $A_I(X)=\prod_{i\in I} (X-\omega^i)$ in $O(\vert I\vert \log^2{\vert I \vert})$ time and commits to it as $g^{A_I(\tau)}$ in $O(\vert I \vert)$ time.
+Interpolates $R_I(X)$ such that $R_I(i) = v_i,\forall i \in I$ in $O(\vert I\vert \log^2{\vert I \vert})$ time and commits to it as $g^{R_I(\tau)}$ in $O(\vert I \vert)$ time.
+Returns $T$ iff. $e(c/g^{R_I(\tau)},g)=e(\pi_I, g^{A_I(\tau)})$.
+(When $I=\{i\}$, we have $A_I(X)=X-\omega^i$ and $R_I(X)=v_i$.)
+
+\api $\vcverifyupk(\vrk,i, \upk_i) \rightarrow T/F$.
+Checks that $\omega^i$ is a root of $X^n-1$ (which is committed in $a$) via $e(a_i, g^\tau/g^{(\omega^i)}) = e(a,g)$.
+Checks that $\lagr_i(\omega^i) = 1$ via $e(\ell_i/g^1, g) =e(u_i,g^\tau/g^{(\omega^i)})$, where $\ell_i=a_i^{1/A'(\omega^i)}=g^{\lagr_i(\tau)}$.
+
+\api $\vccommupdate(c, \delta, j,\upk_j)\rightarrow c'$.
+Returns $c'=c\cdot (\ell_j)^\delta$, where $\ell_j=a_j^{1/A'(\omega^j)}$.
+
+\api $\vcproofupdate(\pi_i, \delta, i,j, \upk_i, \upk_j)\rightarrow \pi'_i$.
+If $i=j$, returns $\pi_i'=\pi_i \cdot (u_i)^\delta$.
+If $i\ne j$, computes $w_{i,j}=a_i^{1/(\omega^i - \omega^j)}\cdot a_j^{1/(\omega^j - \omega^i)}$ and $u_{i,j}=w_{i,j}^{1/A'(\omega^j)}$ (see \cref{s:asvc:from-kzg:updating-proofs}) and returns $\pi_i'=\pi_i \cdot (u_{i,j})^\delta$.
+% If implemented carefully, this should take 2 exps and 3 group operations:
+% \pi_i' = \pi_i \cdot (a_i^\frac{1}{\omega^i - \omega^j} a_j^\frac{1}{\omega^j - \omega^i})^\frac{\delta}{A'(\omega^j)}
+%        = \pi_i \dot (a_i^\frac{\delta}{A'(\omega^j)(\omega^i - \omega^j)} a_j^\frac{\delta}{A'(\omega^j)(\omega^j - \omega^i)})
+
+\api $\vcaggregateproofs(I, (\pi_i)_{i\in I})\rightarrow \pi_I$.
+Computes $A_I(X)=\prod_{i\in I} (X-\omega^i)$, its derivative $A'_I(X)$ and all $c_i = (A'_I(\omega^i))_{i\in I}$ in $O(\vert I\vert \log^2{\vert I \vert})$ time.
+Returns $\pi_I = \prod_{i\in I} \pi_i^{c_i}$.
+
+\subsubsection{Distributing the Trusted Setup}
+\label{s:asvc:from-kzg:public-params}
+Our aSVC requires a centralized, trusted setup phase that computes its public parameters.
+We can decentralize this phase using highly-efficient MPC protocols that generate $(g^{\tau^i})$'s in a distributed fashion~\cite{BGM17}.
+Then, we can derive the remaining parameters from the $(g^{\tau^i})$'s, which has the advantage of keeping our parameters \textit{updatable}.
+First, the commitment $a=g^{A(\tau)}$ to $A(X)=X^{n} - 1$ can be computed in $O(1)$ time via an exponentiation.
+Second, the commitments $\ell_i=g^{\lagr_i(\tau)}$ to Lagrange polynomials can be computed via a single DFT on the $(g^{\tau^i})$'s~\cite[Sec 3.12.3, pg. 97]{Virza17}.
+% Also in BCG+15: Oakland paper I-C-2, page 5
+Third, each $a_i = g^{A(\tau)/(\tau -\omega^i)}$ is a bilinear accumulator membership proof for $\omega^i$ w.r.t. $A(X)$ and can all be computed in $O(n\log{n})$ time using FK~\cite{FK20}.
+But what about computing each $u_i =  g^{\frac{\lagr_i(\tau)-1}{X-\omega^i}}$?
+
+\parhead{Computing All $u_i$'s Fast.}
+Inspired by the FK technique~\cite{FK20}, we show how to compute all $n$ $u_i$'s in $O(n\log{n})$ time using a single DFT on group elements.
+First, note that $u_i=g^{\frac{\lagr_i(\tau)-1}{X-\omega^i}}$ is a KZG evaluation proof for $\lagr_i(\omega^i)=1$.
+Thus, $u_i = g^{Q_i(\tau)}$ where $Q_i(X) = \frac{\lagr_i(X)-1}{X-\omega^i}$.
+Second, let $\psi_i(X)=A'(\omega^i)\lagr_i(X)=\frac{X^n - 1}{X-\omega^i}$.
+Then, let $\pi_i=g^{q_i(\tau)}$ be an evaluation proof for $\psi_i(\omega^i)=A'(\omega^i)$ where $q_i(X) = \frac{\psi_i(X)-A'(\omega^i)}{X-\omega^i}$ and note that $Q_i(X)=\frac{1}{A'(\omega^i)}q_i(X)$. % so
+Thus,  computing all $u_i$'s reduces to computing all $\pi_i$'s.
+However, since each proof $\pi_i$ is for a \textit{different} polynomial $\psi_i(X)$, directly applying FK does not work.
+Instead, we give a new algorithm that leverages the structure of $\psi_i(X)$ when divided by $X-\omega^i$.
+Specifically, in\ifCameraReady~\cite[Appendix B]{TAB+20e}\else~\cref{s:computing-all-uis}\fi, we show that:
+\begin{align}
+\label{eq:ui-qi}
+q_i(X) &= \sum_{j\in [0,n-2]} H_j(X) \omega^{ij},\forall i \in [0,n),\ \text{where}\ H_j(X) = (j+1) X^{(n-2)-j}
+\end{align}
+If we let $h_j$ be a KZG commitment to $H_j(X)$, then we have $\pi_i = \prod_{j\in [0,n-2]} h_j^{(\omega^{ij})}$, $\forall i \in [0,n)$.
+Next, recall that the Discrete Fourier Transform (DFT) \textit{on a vector of group elements} $\vect{a}=[a_0, a_1, \dots, a_{n-1}]\in \G^n$ is:
+\begin{align}
+\mathsf{DFT}_n(\vect{a}) = \vect{\hat{a}}=[\hat{a}_0, \hat{a}_1, \dots, \hat{a}_{n-1}]\in \G^n,\ \text{where}\ \hat{a}_i= \prod_{j\in [0,n)} a_j^{(\omega^{ij})}
+\end{align}
+
+If we let $\vect{\pi}=[\pi_0, \pi_1, \dots, \pi_{n-1}]$ and $\vect{h} = [h_0, h_1, \dots, h_{n-2}, 1_\G, 1_\G]$, then $\vect{\pi} = \mathsf{DFT_n}(\vect{h})$.
+Thus, computing all $n$ $h_i$'s takes $O(n)$ time and computing all $n$ $\pi_i$'s takes an $O(n\log{n})$ time DFT.
+As a result, computing all $u_i$'s from the $(g^{\tau^i})$'s takes $O(n\log{n})$ time overall.
+
+\subsubsection{Correctness and Security}
+\label{s:svc:correctness-and-security}
+The correctness of our aSVC scheme follows naturally from Lagrange interpolation.
+Aggregation and proof updates are correct by the arguments laid out in \cref{s:asvc:from-kzg:aggregating-proofs,s:asvc:from-kzg:updating-proofs}, respectively.
+Subvector proofs are correct by the correctness of KZG batch proofs~\cite{KZG10a}.
+\ifCameraReady
+We prove our aSVC is position binding and has update key uniqueness in the extended version ~\cite[Appendix C]{TAB+20e}.
+\else
+
+The security of our aSVC schemes does \textit{not} follow naturally from the security of KZG polynomial commitments.
+Specifically, as pointed out in~\cite{GRWZ20}, two inconsistent subvector proofs do \textit{not} lead to a direct break of KZG's \textit{batch evaluation binding}, as defined in~\cite[Sec. 3.4]{KZG10a}.
+To address this, we propose a stronger batch evaluation binding definition (see \cref{def:kzg:batch-opening-binding} in \cref{s:kzg-batch-def}) and prove KZG satisfies it under $n$-SBDH.
+This new definition is directly broken by two inconsistent subvector proofs, which implies our aSVC is secure under $n$-SBDH.
+Lastly, we prove update key uniqueness holds unconditionally in \cref{s:update-key-uniqueness-proof}.
+\fi

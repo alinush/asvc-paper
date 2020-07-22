@@ -1,0 +1,43 @@
+% macros for proving/verification times and other VC things
+\newcommand{\bbfc}{\ensuremath{N \lg{N}}}                       % time for BBF19 to commit
+\newcommand{\bbvy}{\ensuremath{\myred{\ell\lg{N}+\lambda}}}     % time for BBF19 to verify one (individual) proof
+\newcommand{\bbvys}{\ensuremath{b\ell\lg{N}+\lambda}}           % time for BBF19 to verify one subvector proof
+\newcommand{\btc}{\ensuremath{\mlgsm+\nlgn}}                    % batch proof computation time for KZG-based schemes
+\newcommand{\cfoo}{\ensuremath{N\lg{N}}}                        % time for CFG_1 to prove one position
+\newcommand{\cfos}{\ensuremath{\ell(n-b)\lg{N}}}                % time for CFG_1 to prove a subvector
+\newcommand{\cftc}{\ensuremath{N \lg{n}}}                       % time for CFG_2 to commit
+\newcommand{\cfto}{\ensuremath{N \lg{n}}}                       % time for CFG_2 to prove one position
+\newcommand{\cfts}{\ensuremath{\ell(n-b)\lg{(n-b)}}}            % time for CFG_2 to prove a subvector
+\newcommand{\cftvs}{\ensuremath{\ell b\lg{b}}}                  % time for CFG_2 to verify one subvector proof
+\newcommand{\cfgOne}{CFG$_\ell^1$}
+\newcommand{\cfgTwo}{CFG$_\ell^2$}
+\newcommand{\tcz}{\ensuremath{\lgn + b}}                        % |\vrk| for TCZ+20
+
+% shorthand macros to keep TeX tables small
+\newcommand{\lgn}{\ensuremath{\lg{n}}}
+\newcommand{\lgr}{\ensuremath{\myred{\lg{n}}}}
+\newcommand{\llgn}{\ensuremath{\ell \lg{N}}}
+\newcommand{\lln}{\ensuremath{\log{(\ell n)}}}
+\newcommand{\mlgm}{\ensuremath{b\lg{b}}}
+\newcommand{\mlgsm}{\ensuremath{b\lg^2{b}}}
+\newcommand{\nlgn}{\ensuremath{n\lg{n}}}
+\newcommand{\nlgsn}{\ensuremath{n\lg^2{n}}}
+\newcommand{\nop}{\myred{$\times$}}
+\newcommand{\ns}{\ensuremath{\myred{n^2}}}
+\newcommand{\rbl}{\ensuremath{\myred{{b\log{n}}}}}
+\newcommand{\rl}{\myred{\log{n}}}
+\newcommand{\rlgn}{\ensuremath{\myred{\llgn}}}
+\newcommand{\rblb}{\ensuremath{\myred{b\lg^2{b}}}} % note \bm{\log^2{b}} errors for some reason
+\newcommand{\rn}{\ensuremath{\myred{{n}}}}
+
+% macros for group element sizes, pairing operations, field operations, etc.
+\newcommand{\Gsz}{\ensuremath{\ |\G|}}
+\newcommand{\Gexp}{\ensuremath{\ \G}}
+%\newcommand{\Fsz}{\ensuremath{\ |\mathbb{F}|}}
+\newcommand{\Fop}{\ensuremath{\ \mathbb{F}}}
+
+\newcommand{\Pair}{\ensuremath{\ \mathbb{P}}}
+%\newcommand{\Bits}{\ensuremath{\ |\mathsf{bit}|}}
+
+\newcommand{\Ghop}{\ensuremath{\ \myred{\Gho}}}
+\newcommand{\Ghsz}{\ensuremath{\ \myred{|\Gho|}}}
