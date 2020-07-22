@@ -17,7 +17,7 @@ perl latexpand/latexpand /tmp/main.tex >camera-ready/main.tex
 cp Makefile camera-ready/   # only temporarily
 
 # Copy stuff Springer wants
-cp consent.pdf camera-ready/
+#cp consent.pdf camera-ready/
 cp main.bbl camera-ready/
 cp *.bib camera-ready/
 cp *.bst camera-ready/
