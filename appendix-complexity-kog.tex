@@ -276,7 +276,7 @@ Updating the proof is not discussed but can be done in $O(1)$ time, if the updat
 \parhead{Subvector Proofs for $(v_i)_{i\in I}$}
 An $O(1)$-sized subvector proof for $\vect{v}_I$ is just a random linear combination of all proofs $\pi_i,\forall i\in I$.
 First, all $b$ proofs $\pi_i$ are computed in $O(bn)$ exponentiations as described above.
-Second, for each $i\in I$, $t_i = H(c, I, {v_i}_{i\in I})$ is computed using a random oracle $H : \{0,1\}^*\rightarrow \Zp$.
+Second, for each $i\in I$, $t_i = H(c, I, (v_i)_{i\in I})$ is computed using a random oracle $H : \{0,1\}^*\rightarrow \Zp$.
 Third, the subvector proof $\pi_I$ is computed as:
 \begin{align}
 \pi_I = \prod_{i\in I} \pi_i^{t_i}
