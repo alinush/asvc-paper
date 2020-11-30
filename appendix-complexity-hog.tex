@@ -43,7 +43,7 @@
 
         \cfgOne~\cite{CFG+20}   & $1$ & $1$ & 1   & \bbfc & $1^*$ & $1\ |\G_?|$       & \cfoo & \bbvy & 1    & \cfos & \bbvys & $b\lg{b}\lg{N}$  & $N\lg^2{N}$\\
 
-        \cfgTwo~\cite{CFG+20}   & $1$ & $1$ & 1   & \cftc & 1     & $1\ |\G_?|$       & \cfto & $\ell$& 1    & \cfts & \cftvs & $\ell b\lg^2{b}$ & $N\lg^2{n}$\\
+        \cfgTwo~\cite{CFG+20}   & $1$ & $1$ & 1   & \cftc & 1     & $1\ |\G_?|$       & \cfto & $\ell$& 1    & \cfts & \cftvs & $\ell b\lg^2{b}$ & $N\lg{n}$\\
 
         \toprule
 
@@ -213,4 +213,4 @@ For CFG$_{\ell}^2$, this takes $O(\ell b\log^2{b})$ group operations~\cite[Sec 5
 The paper gives a generic technique of using incremental (dis)aggregation to precompute auxiliary information for serving proofs fast.
 This technique can also be used to precompute all proofs fast in quasilinear time.
 In CFG$_\ell^{1}$, we believe this will take $O(N\log^2{N})$ group operations, dominated by the complexity of computing all $N=\ell n$ RSA accumulator membership witnesses.
-In CFG$_\ell^{2}$, we estimate this will take $O(\ell n\log^2{n})$ group operations.
+In CFG$_\ell^{2}$, we estimate this will take $O(\ell n\log{n})$ group operations (since disaggregating a proof of size $m$ into two proofs of size $m/2$ takes $O(\ell m)$ group operations).
