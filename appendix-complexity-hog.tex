@@ -110,7 +110,7 @@ A proof $\pi_i$ for $v_i$ must show two things:
 \end{enumerate}
 
 \parhead{Proving ``One'' Bits are Accumulated.}
-To prove $P_i$ is ``in'', an $O(1)$-sized RSA accumulator subset proof w.r.t. $c$ can be computed with $O(\ell n \lln)$ group operations (via \textit{A}.$\mathsf{NonMemWitCreate}^*$ in~\cite[Sec 4.2, pg. 15]{BBF18}):
+To prove $P_i$ is ``in'', an $O(1)$-sized RSA accumulator subset proof w.r.t. $c$ can be computed with $O(\ell n \lln)$ group operations (via \textit{A}.$\mathsf{MemWitCreate}^*$ in~\cite[Sec 4.2, pg. 15]{BBF18}):
 \begin{align}
 \label{eq:bbf:pi_i1}
 \pi_i^{[1]} &=g^{\prod_{j\in [n],j \ne i} P_j} = c^{1/P_i}
