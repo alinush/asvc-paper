@@ -11,3 +11,7 @@ For the ePrint version, just do a `make` and then open `main.pdf` with your favo
 In section 3.4.2, in "The $i\ne j$ Case", at some point the text says: $W_{i,j}(X) = c_i \frac{1}{X-\omega^i} + c_j \frac{1}{X-\omega_j}$.
 This is an unfortunate typo.
 The correct form is $W_{i,j}(X) = A(X) \left(c_i \frac{1}{X-\omega^i} + c_j \frac{1}{X-\omega_j}\right) = c_i \frac{A(X)}{X-\omega^i} + c_j \frac{A(X)}{X-\omega_j}$.
+
+In section 3.4, 2nd paragraph, $A'_I(X)=\prod_{j\in[0,n)} A_I(X)/(X-\omega^j)$ is incorrectly defined.
+The correct form is $A'_I(X)=\prod_{j\in I} A_I(X)/(X-\omega^j)$
+

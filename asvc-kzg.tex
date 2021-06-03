@@ -34,7 +34,7 @@ First, let us rewrite the Lagrange polynomial for interpolating $\phi(X)$ given 
 \lagr_i(X)=\prod_{j\in I, j\ne i} \frac{X-\omega^j}{\omega^i - \omega^j}=\frac{A_I(X)}{A'_I(\omega^i) (X-\omega^i)},\ \text{where}\ A_I(X)=\prod_{i\in I} (X-\omega^i)
 \end{align}
 }%
-Here, $A'_I(X)=\sum_{j\in[0,n)} A_I(X)/(X-\omega^j)$ is the derivative of $A_I(X)$~\cite{vG13ModernCh10}.
+Here, $A'_I(X)=\sum_{j\in I} A_I(X)/(X-\omega^j)$ is the derivative of $A_I(X)$~\cite{vG13ModernCh10}.
 Next, for any $\phi(X)$, we can rewrite the Lagrange interpolation formula as $\phi(X) = A_I(X)\sum_{i\in[0,n)} \frac{y_i}{A'_I(\omega^i)(X-\omega^i)}$.
 In particular, for $\phi(X)=1$, this implies $\frac{1}{A_I(X)} = \sum_{i\in[0,n)} \frac{1}{A'_I(\omega^i)(X-\omega^i)}$.
 In other words, we can decompose $A_I(X)$ as:
